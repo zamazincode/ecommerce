@@ -1,0 +1,43 @@
+name: Web
+
+on:
+    push:
+        branches: [main, develop]
+        paths: ["web/**", ".github/workflows/web.yml"]
+    pull_request:
+        branches: [main, develop]
+        paths: ["web/**", ".github/workflows/web.yml"]
+
+jobs:
+    build-and-test:
+        runs-on: ubuntu-latest
+        defaults:
+            run:
+                working-directory: ./web
+
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Node kurulumu
+              uses: actions/setup-node@v4
+              with:
+                  node-version: "22"
+                  cache: "npm"
+                  cache-dependency-path: web/package-lock.json
+
+            - name: Bağımlılıklar
+              run: npm ci
+
+            - name: Lint
+              run: npm run lint
+
+            - name: Tip kontrolü
+              run: npx tsc --noEmit
+
+            - name: Birim testler
+              run: npm run test -- --run
+
+            - name: Build
+              run: npm run build
+              env:
+                  NEXT_PUBLIC_API_URL: https://placeholder.invalid

@@ -1,0 +1,40 @@
+# Satır sonlarını depoda LF olarak sabitle.
+# Windows'ta geliştirip Linux CI'da derliyoruz; bu olmadan aynı dosya
+# iki ortamda farklı görünür ve sahte diff'ler üretir.
+* text=auto eol=lf
+
+# Windows araçlarının CRLF beklediği dosyalar
+*.sln    text eol=crlf
+*.ps1    text eol=crlf
+*.psm1   text eol=crlf
+*.cmd    text eol=crlf
+*.bat    text eol=crlf
+
+# Kabuk script'leri her zaman LF (CRLF olursa Docker/CI'da çalışmaz)
+*.sh     text eol=lf
+Dockerfile text eol=lf
+
+# İkili dosyalar — git bunlara dokunmasın, diff üretmesin
+*.png    binary
+*.jpg    binary
+*.jpeg   binary
+*.gif    binary
+*.ico    binary
+*.webp   binary
+*.avif   binary
+*.woff   binary
+*.woff2  binary
+*.ttf    binary
+*.eot    binary
+*.pdf    binary
+*.zip    binary
+*.gz     binary
+*.dll    binary
+*.pdb    binary
+*.snk    binary
+
+# Üretilen dosyalar — GitHub diff'te varsayılan olarak katlansın
+web/src/types/api.ts    linguist-generated=true
+mobile/types/api.ts     linguist-generated=true
+**/bun.lock             linguist-generated=true
+**/package-lock.json    linguist-generated=true

@@ -1,0 +1,72 @@
+services:
+    postgres:
+        image: postgres:17-alpine
+        container_name: commerce-postgres
+        restart: unless-stopped
+        environment:
+            POSTGRES_DB: ${POSTGRES_DB:-commerce}
+            POSTGRES_USER: ${POSTGRES_USER:-postgres}
+            POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+            LANG: tr_TR.utf8
+        ports:
+            - "5432:5432"
+        volumes:
+            - pgdata:/var/lib/postgresql/data
+        healthcheck:
+            test:
+                [
+                    "CMD-SHELL",
+                    "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-commerce}",
+                ]
+            interval: 10s
+            timeout: 5s
+            retries: 5
+            start_period: 10s
+
+    redis:
+        image: redis:7-alpine
+        container_name: commerce-redis
+        restart: unless-stopped
+        command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+        ports:
+            - "6379:6379"
+        volumes:
+            - redisdata:/data
+        healthcheck:
+            test: ["CMD", "redis-cli", "ping"]
+            interval: 10s
+            timeout: 3s
+            retries: 5
+
+    # Geliştirme ortamı mail yakalayıcı. Hiçbir mail dışarı çıkmaz.
+    # Arayüz: http://localhost:8025
+    mailpit:
+        image: axllent/mailpit:latest
+        container_name: commerce-mailpit
+        restart: unless-stopped
+        ports:
+            - "1025:1025" # SMTP
+            - "8025:8025" # Web arayüz
+        environment:
+            MP_MAX_MESSAGES: 500
+            MP_SMTP_AUTH_ACCEPT_ANY: 1
+            MP_SMTP_AUTH_ALLOW_INSECURE: 1
+
+    # Yapılandırılmış log arayüzü. Arayüz: http://localhost:8081
+    seq:
+        image: datalust/seq:latest
+        container_name: commerce-seq
+        restart: unless-stopped
+        environment:
+            ACCEPT_EULA: "Y"
+            SEQ_FIRSTRUN_ADMINPASSWORD: "Admin123"
+        ports:
+            - "8081:80" # Web arayüz
+            - "5341:5341" # Log alımı
+        volumes:
+            - seqdata:/data
+
+volumes:
+    pgdata:
+    redisdata:
+    seqdata:
