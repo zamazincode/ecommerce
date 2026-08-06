@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using System.Threading.RateLimiting;
 using Commerce.Api.Common.Handlers;
+using Commerce.Api.Features.Catalog;
 using Commerce.Api.Persistence;
 using Commerce.Api.Persistence.Identity;
 using Commerce.Api.Persistence.Seeding;
@@ -85,6 +86,13 @@ builder.Services.AddProblemDetails();
 builder.Services.AddValidatorsFromAssemblyContaining<Program>(includeInternalTypes: true);
 
 builder.Services.AddOpenApi();
+
+// ─────────────────────────────────────────────────────────────
+// Özellik servisleri (Faz 3)
+// ─────────────────────────────────────────────────────────────
+builder.Services.AddScoped<ProductService>();
+builder.Services.AddScoped<CategoryService>();
+builder.Services.AddScoped<CatalogService>();
 
 // ─────────────────────────────────────────────────────────────
 // CORS
@@ -200,6 +208,13 @@ app.MapHealthChecks("/health", new HealthCheckOptions
 });
 
 app.MapGet("/", () => Results.Redirect("/scalar/v1")).ExcludeFromDescription();
+
+// ─────────────────────────────────────────────────────────────
+// Katalog endpoint'leri (Faz 3)
+// ─────────────────────────────────────────────────────────────
+app.MapProductEndpoints();
+app.MapCategoryEndpoints();
+app.MapCatalogEndpoints();
 
 
 
