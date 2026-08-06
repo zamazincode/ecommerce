@@ -1,0 +1,31 @@
+{
+    // Workspace kökü repo kökü ama solution api/ altında.
+    // Bu satır olmadan dil sunucusu solution'ı bulamıyor, dosyaları
+    // projeden kopuk açıyor ve "Go to Definition" çalışmıyor.
+    "dotnet.defaultSolution": "api/Commerce.slnx",
+
+    // Henüz using'i olmayan tiplerin de önerilerde çıkması
+    "dotnet.completion.showCompletionItemsFromUnimportedNamespaces": true,
+
+    // Parametre ve tip ipuçları — EF projeksiyonlarında çok işe yarıyor
+    "dotnet.inlayHints.enableInlayHintsForParameters": true,
+    "dotnet.inlayHints.enableInlayHintsForLiteralParameters": true,
+    "dotnet.inlayHints.enableInlayHintsForTypes": true,
+
+    "[csharp]": {
+        "editor.defaultFormatter": "ms-dotnettools.csharp",
+        "editor.formatOnSave": true
+    },
+
+    // Derleme çıktıları Explorer'ı ve arama sonuçlarını kirletmesin
+    "files.exclude": {
+        "**/bin": true,
+        "**/obj": true
+    },
+    "search.exclude": {
+        "**/bin": true,
+        "**/obj": true,
+        "**/node_modules": true,
+        "**/.next": true
+    }
+}

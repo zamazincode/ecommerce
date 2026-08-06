@@ -37,9 +37,9 @@ jobs:
               run: dotnet build --no-restore -c Release
 
             # İlk başta yorumda bırak, 'dotnet format' bir kez çalıştırdıktan sonra aç.
-            # - name: Format kontrolü
-            #   working-directory: ./api
-            #   run: dotnet format --verify-no-changes
+            - name: Format kontrolü
+              working-directory: ./api
+              run: dotnet format --verify-no-changes
 
             - name: Test
               working-directory: ./api
