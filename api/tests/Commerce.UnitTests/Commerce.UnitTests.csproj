@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -13,8 +13,8 @@
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
     <PackageReference Include="NSubstitute" Version="6.0.0" />
     <PackageReference Include="Shouldly" Version="4.3.0" />
-    <PackageReference Include="xunit" Version="2.9.3" />
     <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
+    <PackageReference Include="xunit.v3" Version="3.2.2" />
   </ItemGroup>
 
   <ItemGroup>
@@ -22,8 +22,10 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\Commerce.Api\Commerce.Api.csproj" />
+    <!-- Domain: saf iş kuralları (ShippingCalculator, SlugGenerator, ...) -->
     <ProjectReference Include="..\..\src\Commerce.Domain\Commerce.Domain.csproj" />
+    <!-- Api: Faz 3'ten itibaren ProductSorting gibi sınıflar test edilecek -->
+    <ProjectReference Include="..\..\src\Commerce.Api\Commerce.Api.csproj" />
   </ItemGroup>
 
 </Project>

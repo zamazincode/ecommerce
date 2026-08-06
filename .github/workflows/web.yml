@@ -18,26 +18,28 @@ jobs:
         steps:
             - uses: actions/checkout@v4
 
-            - name: Node kurulumu
-              uses: actions/setup-node@v4
+            # Proje bun kullanıyor (web/bun.lock). npm değil — setup-node'un
+            # "cache: npm" + package-lock.json araması burada patlar.
+            - name: Bun kurulumu
+              uses: oven-sh/setup-bun@v2
               with:
-                  node-version: "24"
-                  cache: "npm"
-                  cache-dependency-path: web/package-lock.json
+                  bun-version: latest
 
             - name: Bağımlılıklar
-              run: npm ci
+              run: bun install --frozen-lockfile
 
             - name: Lint
-              run: npm run lint
+              run: bun run lint
 
             - name: Tip kontrolü
-              run: npx tsc --noEmit
+              run: bunx tsc --noEmit
 
-            - name: Birim testler
-              run: npm run test -- --run
+            # Faz W1'de Vitest kurulup package.json'a "test" script'i eklenince
+            # yorumu kaldır. Şimdi kaldırırsan script olmadığı için CI kırmızı olur.
+            # - name: Birim testler
+            #   run: bun run test -- --run
 
             - name: Build
-              run: npm run build
+              run: bun run build
               env:
                   NEXT_PUBLIC_API_URL: https://placeholder.invalid
