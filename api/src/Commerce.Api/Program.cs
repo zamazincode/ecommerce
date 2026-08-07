@@ -1,17 +1,22 @@
-using System.Security.Claims;
 using System.Threading.RateLimiting;
+using Commerce.Api.Common.Email;
 using Commerce.Api.Common.Handlers;
+using Commerce.Api.Common.OpenApi;
+using Commerce.Api.Features.Auth;
 using Commerce.Api.Features.Catalog;
+using Commerce.Api.Features.Search;
 using Commerce.Api.Persistence;
 using Commerce.Api.Persistence.Identity;
 using Commerce.Api.Persistence.Seeding;
 using Commerce.Api.Persistence.Seeding.Import;
 using FluentValidation;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Microsoft.IdentityModel.Tokens;
 using Scalar.AspNetCore;
 using Serilog;
 
@@ -86,7 +91,60 @@ builder.Services.AddProblemDetails();
 
 builder.Services.AddValidatorsFromAssemblyContaining<Program>(includeInternalTypes: true);
 
-builder.Services.AddOpenApi();
+builder.Services.AddOpenApi(o => o.AddDocumentTransformer<BearerSecuritySchemeTransformer>());
+
+// ─────────────────────────────────────────────────────────────
+// Kimlik doğrulama (Faz 5)
+// ─────────────────────────────────────────────────────────────
+builder.Services.AddSingleton(TimeProvider.System);
+
+builder.Services.AddOptions<JwtSettings>()
+    .Bind(builder.Configuration.GetSection(JwtSettings.SectionName))
+    .Validate(s => !string.IsNullOrWhiteSpace(s.Key) && s.Key.Length >= 32,
+              "Jwt:Key en az 32 karakter olmalı.")
+    .ValidateOnStart();
+
+builder.Services.AddOptions<WebAppSettings>()
+    .Bind(builder.Configuration.GetSection(WebAppSettings.SectionName));
+
+var jwtSection = builder.Configuration.GetSection(JwtSettings.SectionName);
+// Sabit yedek anahtar YOK (K3): eksikse burada dur, sessizce zayıf imzayla devam etme.
+var jwtKey = jwtSection["Key"];
+if (string.IsNullOrWhiteSpace(jwtKey) || jwtKey.Length < 32)
+    throw new InvalidOperationException(
+        "Jwt:Key tanımlı değil ya da 32 karakterden kısa. Geliştirmede: " +
+        "dotnet user-secrets set \"Jwt:Key\" \"<en az 32 karakter>\" --project api/src/Commerce.Api");
+
+builder.Services
+    .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        // .NET'in uzun claim URI'lerine ÇEVİRME. Bu satır gidince sub/role
+        // claim'leri yeniden adlandırılır, GetUserId() ve IsInRole() sessizce çöker.
+        options.MapInboundClaims = false;
+
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidIssuer = jwtSection["Issuer"],
+            ValidateAudience = true,
+            ValidAudience = jwtSection["Audience"],
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new SymmetricSecurityKey(System.Text.Encoding.UTF8.GetBytes(jwtKey)),
+            ValidateLifetime = true,
+            ClockSkew = TimeSpan.Zero,      // varsayılan 5 dk tolerans süre testlerini bozar
+            NameClaimType = JwtClaims.Sub,
+            RoleClaimType = JwtClaims.Role
+        };
+    });
+
+builder.Services.AddAuthorizationBuilder()
+    .AddPolicy(AuthPolicies.AdminOnly, p => p.RequireRole(AppRoles.Admin))
+    .AddPolicy(AuthPolicies.CanManageProducts, p => p.RequireRole(AppRoles.Admin));
+
+builder.Services.AddScoped<TokenService>();
+builder.Services.AddScoped<AuthService>();
+builder.Services.AddScoped<IEmailService, ConsoleEmailService>();
 
 // ─────────────────────────────────────────────────────────────
 // Özellik servisleri (Faz 3)
@@ -94,6 +152,11 @@ builder.Services.AddOpenApi();
 builder.Services.AddScoped<ProductService>();
 builder.Services.AddScoped<CategoryService>();
 builder.Services.AddScoped<CatalogService>();
+
+// ─────────────────────────────────────────────────────────────
+// Arama servisi (Faz 4)
+// ─────────────────────────────────────────────────────────────
+builder.Services.AddScoped<ISearchService, PostgresSearchService>();
 
 // ─────────────────────────────────────────────────────────────
 // CORS
@@ -128,14 +191,17 @@ if (!isTesting)
                     Window = TimeSpan.FromMinutes(1)
                 }));
 
-        // Auth endpoint'leri için sıkı politika
-        // .RequireRateLimiting("auth")
-        options.AddFixedWindowLimiter("auth", o =>
-        {
-            o.PermitLimit = 5;
-            o.Window = TimeSpan.FromMinutes(1);
-            o.QueueLimit = 0;
-        });
+        // Auth endpoint'leri için sıkı politika (.RequireRateLimiting("auth")).
+        // AddFixedWindowLimiter TEK bir limiter kurar — tüm istemciler aynı
+        // kovayı paylaşır. IP'ye bölmek için AddPolicy + partition şart.
+        options.AddPolicy("auth", ctx => RateLimitPartition.GetFixedWindowLimiter(
+            ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 10,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0
+            }));
     });
 }
 
@@ -184,7 +250,7 @@ app.UseSerilogRequestLogging(options =>
         // Bu iki alan sayesinde Seq'te "şu kullanıcının şu isteğindeki tüm loglar"
         // diye filtreleyebiliyorsun.
         diag.Set("TraceId", http.TraceIdentifier);
-        diag.Set("UserId", http.User.FindFirst(ClaimTypes.NameIdentifier)?.Value);
+        diag.Set("UserId", http.User.FindFirst(JwtClaims.Sub)?.Value);
     };
 });
 
@@ -192,6 +258,11 @@ app.UseCors(CorsPolicy);
 
 if (!isTesting)
     app.UseRateLimiter();
+
+// Sıra kritik: UseAuthentication token'ı okuyup HttpContext.User'ı doldurur,
+// UseAuthorization politikaları uygular. Ters yazılırsa HER istek 401 döner.
+app.UseAuthentication();
+app.UseAuthorization();
 
 if (app.Environment.IsDevelopment())
 {
@@ -227,7 +298,15 @@ app.MapProductEndpoints();
 app.MapCategoryEndpoints();
 app.MapCatalogEndpoints();
 
+// ─────────────────────────────────────────────────────────────
+// Arama endpoint'leri (Faz 4)
+// ─────────────────────────────────────────────────────────────
+app.MapSearchEndpoints();
 
+// ─────────────────────────────────────────────────────────────
+// Kimlik doğrulama endpoint'leri (Faz 5)
+// ─────────────────────────────────────────────────────────────
+app.MapAuthEndpoints();
 
 app.Run();
 

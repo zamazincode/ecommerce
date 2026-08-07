@@ -1,6 +1,7 @@
 using Commerce.Domain.Catalog;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using NpgsqlTypes;
 
 namespace Commerce.Api.Persistence.Configurations;
 
@@ -107,6 +108,48 @@ public class ProductConfiguration : IEntityTypeConfiguration<Product>
          .WithMany(x => x.Products)
          .HasForeignKey(x => x.BrandId)
          .OnDelete(DeleteBehavior.SetNull);
+
+        // ── Arama (Faz 4) ──────────────────────────────────────────
+        // SearchVector/SearchName Commerce.Domain'e Npgsql bağımlılığı
+        // eklememek için SHADOW property olarak tanımlanıyor (CLAUDE.md:
+        // "Commerce.Domain saf POCO, EF'e bağımlı değil"). Uygulama kodu
+        // bu iki kolonu hiç okumaz/yazmaz — veritabanı GENERATED (stored)
+        // olarak kendisi üretir, sorgularda EF.Property<T> ile erişilir.
+        //
+        // unaccent ÖNCE, kök bulma (to_tsvector) SONRA uygulanıyor: aksansız
+        // yazan kullanıcı ile aksanlı sorgu simetrik şekilde eşleşsin diye
+        // (bkz. plan Ölçüm 2.3/2.4). immutable_unaccent, yerleşik unaccent()
+        // IMMUTABLE olmadığı için migration'da tanımlanan bir sarmalayıcı.
+        b.Property<NpgsqlTsVector>("SearchVector")
+         .HasColumnType("tsvector")
+         .HasComputedColumnSql(
+             """
+             setweight(to_tsvector('turkish', immutable_unaccent(coalesce("Name", ''))), 'A') ||
+             setweight(to_tsvector('turkish', immutable_unaccent(coalesce("AuthorNames", ''))), 'B') ||
+             setweight(to_tsvector('turkish', immutable_unaccent(coalesce("PublisherName", ''))), 'C') ||
+             setweight(to_tsvector('turkish', immutable_unaccent(coalesce("Description", ''))), 'D')
+             """,
+             stored: true);
+
+        b.HasIndex("SearchVector")
+         .HasMethod("gin")
+         .HasDatabaseName("ix_products_searchvector");
+
+        // Autocomplete için: Ad + yazar adı (yayınevi BİLEREK yok — eklenirse
+        // "can" yazan kullanıcının önerileri "Can Yayınları"nın onlarca
+        // ürünüyle dolar). text kullanılıyor, varchar(300) DEĞİL: Name(300) +
+        // AuthorNames(500) toplamı sığmaz, ayrıca ConfigureConventions'daki
+        // 512 sınırını açıkça ezmemiz gerekiyor.
+        b.Property<string>("SearchName")
+         .HasColumnType("text")
+         .HasComputedColumnSql(
+             """immutable_unaccent(lower(coalesce("Name", '') || ' ' || coalesce("AuthorNames", '')))""",
+             stored: true);
+
+        b.HasIndex("SearchName")
+         .HasMethod("gin")
+         .HasOperators("gin_trgm_ops")
+         .HasDatabaseName("ix_products_searchname_trgm");
 
         // Soft delete: silinmiş ürünler tüm sorgulardan otomatik düşer.
         // Bilerek görmek istersen .IgnoreQueryFilters() kullanırsın.

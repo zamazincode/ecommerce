@@ -38,6 +38,13 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
     {
         base.OnModelCreating(builder);
         builder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
+
+        // Arama (Faz 4): Türkçe karakter affediciliği ve autocomplete için.
+        // Kurulumun kendisi migration'ın Up'ında elle yazılıyor (immutable_unaccent
+        // fonksiyonundan önce gelmesi gerektiği için) — burası sadece EF'e
+        // uzantıların model snapshot'ında bilinmesini sağlıyor.
+        builder.HasPostgresExtension("unaccent");
+        builder.HasPostgresExtension("pg_trgm");
     }
 
     protected override void ConfigureConventions(ModelConfigurationBuilder builder)

@@ -17,3 +17,9 @@ public class BusinessRuleException(string message) : Exception(message);
 
 /// Çakışan durum → 409. "Bu e-posta zaten kayıtlı" gibi.
 public class ConflictException(string message) : Exception(message);
+
+/// Kimlik doğrulanamadı → 401.
+/// Varsayılan mesaj BİLEREK genel: "kullanıcı yok" ile "şifre yanlış" ayırt
+/// edilemesin (user enumeration).
+public class UnauthorizedException(string message = "E-posta veya şifre hatalı.")
+    : Exception(message);

@@ -1,4 +1,9 @@
+using System.Net.Http.Headers;
+using System.Net.Http.Json;
+using Commerce.Api.Features.Auth.Dtos;
 using Commerce.Api.Persistence;
+using Commerce.Api.Persistence.Identity;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Commerce.IntegrationTests.Infrastructure;
@@ -38,5 +43,74 @@ public abstract class IntegrationTestBase(DatabaseFixture fixture) : IAsyncLifet
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         return await action(db);
+    }
+
+    /// Kullanıcı oluşturur, giriş yapar, Client'a Bearer token'ı yerleştirir.
+    /// Döndürdüğü değer: kullanıcının kimliği (Assert aşamasında lazım olur).
+    protected async Task<Guid> AuthenticateAsync(
+        string email = "musteri@test.com",
+        string password = "Test1234",
+        string role = AppRoles.Customer)
+    {
+        var userId = await CreateUserAsync(email, password, role);
+        var token = await GetAccessTokenAsync(email, password);
+        Client.DefaultRequestHeaders.Authorization = new("Bearer", token);
+        return userId;
+    }
+
+    protected async Task<Guid> CreateUserAsync(string email, string password, string role)
+    {
+        using var scope = Factory.Services.CreateScope();
+        var sp = scope.ServiceProvider;
+
+        var roleManager = sp.GetRequiredService<RoleManager<ApplicationRole>>();
+        if (!await roleManager.RoleExistsAsync(role))
+            await roleManager.CreateAsync(new ApplicationRole { Name = role });
+
+        var userManager = sp.GetRequiredService<UserManager<ApplicationUser>>();
+        var user = new ApplicationUser
+        {
+            UserName = email,
+            Email = email,
+            FirstName = "Test",
+            LastName = "Kullanıcı",
+            EmailConfirmed = true,
+            // Kind=Utc olmak zorunda, yoksa Npgsql timestamptz yazarken patlar.
+            CreatedAt = DateTime.UtcNow
+        };
+
+        var result = await userManager.CreateAsync(user, password);
+        if (!result.Succeeded)
+            throw new InvalidOperationException(
+                "Test kullanıcısı oluşturulamadı: " +
+                string.Join(", ", result.Errors.Select(e => e.Description)));
+
+        await userManager.AddToRoleAsync(user, role);
+        return user.Id;
+    }
+
+    protected async Task<string> GetAccessTokenAsync(string email, string password)
+    {
+        var response = await Client.PostAsJsonAsync("/api/auth/login",
+            new { email, password });
+        response.EnsureSuccessStatusCode();
+
+        var auth = await response.Content.ReadFromJsonAsync<AuthResponse>();
+        return auth!.AccessToken;
+    }
+
+    protected void ClearAuthentication()
+        => Client.DefaultRequestHeaders.Authorization = null;
+
+    /// Testin kendi HttpClient'ını kirletmeden başka bir kullanıcı adına
+    /// istek atmak için (örn. Customer token'ıyla admin endpoint'i denemek).
+    protected async Task<HttpClient> CreateAuthenticatedClientAsync(
+        string email, string password = "Test1234", string role = AppRoles.Customer)
+    {
+        await CreateUserAsync(email, password, role);
+        var client = Factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", await GetAccessTokenAsync(email, password));
+        return client;
     }
 }

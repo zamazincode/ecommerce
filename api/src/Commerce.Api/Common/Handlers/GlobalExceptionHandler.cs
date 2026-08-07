@@ -19,6 +19,7 @@ public sealed class GlobalExceptionHandler(
 
         var (status, title) = exception switch
         {
+            UnauthorizedException => (StatusCodes.Status401Unauthorized, "Kimlik doğrulanamadı"),
             NotFoundException => (StatusCodes.Status404NotFound, "Kayıt bulunamadı"),
             ForbiddenException => (StatusCodes.Status403Forbidden, "Bu işlem için yetkiniz yok"),
             BusinessRuleException => (StatusCodes.Status400BadRequest, "İşlem gerçekleştirilemedi"),
