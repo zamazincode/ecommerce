@@ -16,6 +16,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
     public DbSet<Author> Authors => Set<Author>();
     public DbSet<ProductAuthor> ProductAuthors => Set<ProductAuthor>();
     public DbSet<Publisher> Publishers => Set<Publisher>();
+    public DbSet<Brand> Brands => Set<Brand>();
     public DbSet<ProductImage> ProductImages => Set<ProductImage>();
     public DbSet<BookDetail> BookDetails => Set<BookDetail>();
 

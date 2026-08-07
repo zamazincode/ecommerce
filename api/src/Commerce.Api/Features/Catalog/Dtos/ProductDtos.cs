@@ -28,6 +28,7 @@ public sealed record ProductDetailDto(
     bool InStock,
     CategoryBriefDto Category,
     PublisherBriefDto? Publisher,
+    BrandBriefDto? Brand,
     IReadOnlyList<AuthorBriefDto> Authors,
     BookDetailDto? BookDetail,
     IReadOnlyList<string> ImageUrls);
@@ -35,6 +36,8 @@ public sealed record ProductDetailDto(
 public sealed record CategoryBriefDto(int Id, string Name, string Slug);
 
 public sealed record PublisherBriefDto(int Id, string Name, string Slug);
+
+public sealed record BrandBriefDto(int Id, string Name, string Slug);
 
 public sealed record AuthorBriefDto(int Id, string Name, string Slug);
 

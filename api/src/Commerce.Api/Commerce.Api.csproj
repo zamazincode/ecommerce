@@ -8,6 +8,11 @@
     <PackageReference Include="AspNetCore.HealthChecks.NpgSql" Version="9.0.0" />
     <PackageReference Include="AspNetCore.HealthChecks.Redis" Version="9.0.0" />
     <PackageReference Include="Bogus" Version="35.6.5" />
+    <!-- Gerçek veri aktarımı (Faz 3b): .xlsx okur, akış tabanlı; ileride .xls
+         gelirse de çalışır. windows-1252 kodlaması için gereken CodePages
+         provider'ı .NET 10 paylaşılan çatısında zaten var, ayrı paket gerekmiyor
+         (eklenirse NU1510 uyarısı verir) — kaydı ExcelWorkbookReader yapıyor. -->
+    <PackageReference Include="ExcelDataReader" Version="3.7.0" />
     <PackageReference Include="FluentValidation" Version="12.1.1" />
     <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="12.1.1" />
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="10.0.10" />

@@ -110,6 +110,9 @@ public sealed class ProductService(
                 p.Publisher == null
                     ? null
                     : new PublisherBriefDto(p.Publisher.Id, p.Publisher.Name, p.Publisher.Slug),
+                p.Brand == null
+                    ? null
+                    : new BrandBriefDto(p.Brand.Id, p.Brand.Name, p.Brand.Slug),
                 p.ProductAuthors
                     .Select(pa => new AuthorBriefDto(pa.Author.Id, pa.Author.Name, pa.Author.Slug))
                     .ToList(),

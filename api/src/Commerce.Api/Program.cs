@@ -5,6 +5,7 @@ using Commerce.Api.Features.Catalog;
 using Commerce.Api.Persistence;
 using Commerce.Api.Persistence.Identity;
 using Commerce.Api.Persistence.Seeding;
+using Commerce.Api.Persistence.Seeding.Import;
 using FluentValidation;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Identity;
@@ -155,11 +156,21 @@ if (!isTesting)
 var app = builder.Build();
 // ═════════════════════════════════════════════════════════════
 
-// "dotnet run -- seed"
+// "dotnet run -- seed" — Bogus ile SAHTE veri. Boş veritabanı ve testler için.
 if (args.Contains("seed"))
 {
     using var scope = app.Services.CreateScope();
     await DatabaseSeeder.SeedAsync(scope.ServiceProvider);
+    return;
+}
+
+// "dotnet run -- import [dosya] [--keep]" — GERÇEK veri (D&R xlsx).
+// Varsayılan davranış katalogu temizleyip yeniden yüklemek; --keep verilirse
+// mevcut ürünler korunur ve SKU üzerinden upsert yapılır.
+if (args.Contains("import"))
+{
+    using var scope = app.Services.CreateScope();
+    await CatalogImportCommand.RunAsync(scope.ServiceProvider, app.Environment, args);
     return;
 }
 

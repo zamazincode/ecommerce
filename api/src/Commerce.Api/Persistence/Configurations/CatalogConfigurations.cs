@@ -30,6 +30,16 @@ public class PublisherConfiguration : IEntityTypeConfiguration<Publisher>
     }
 }
 
+public class BrandConfiguration : IEntityTypeConfiguration<Brand>
+{
+    public void Configure(EntityTypeBuilder<Brand> b)
+    {
+        b.Property(x => x.Name).HasMaxLength(200).IsRequired();
+        b.Property(x => x.Slug).HasMaxLength(220).IsRequired();
+        b.HasIndex(x => x.Slug).IsUnique();
+    }
+}
+
 public class AuthorConfiguration : IEntityTypeConfiguration<Author>
 {
     public void Configure(EntityTypeBuilder<Author> b)
@@ -45,11 +55,13 @@ public class ProductConfiguration : IEntityTypeConfiguration<Product>
 {
     public void Configure(EntityTypeBuilder<Product> b)
     {
+        b.Property(x => x.Sku).HasMaxLength(64);
         b.Property(x => x.Name).HasMaxLength(300).IsRequired();
         b.Property(x => x.Slug).HasMaxLength(320).IsRequired();
         b.Property(x => x.Description).HasMaxLength(8000);
         b.Property(x => x.AuthorNames).HasMaxLength(500);
         b.Property(x => x.PublisherName).HasMaxLength(200);
+        b.Property(x => x.BrandName).HasMaxLength(200);
 
         // Hesaplanan property'ler veritabanına yazılmaz
         b.Ignore(x => x.EffectivePrice);
@@ -59,6 +71,11 @@ public class ProductConfiguration : IEntityTypeConfiguration<Product>
         b.HasIndex(x => x.CategoryId);
         b.HasIndex(x => x.CreatedAt);
         b.HasIndex(x => x.Price);
+
+        // Filtreli unique: elle eklenen ürünlerin SKU'su null olabilir ve
+        // Postgres'te birden fazla NULL zaten çakışmaz — filtre yine de
+        // niyeti açık yazıyor ve indeksi küçültüyor.
+        b.HasIndex(x => x.Sku).IsUnique().HasFilter("\"Sku\" IS NOT NULL");
 
         // Stok yarışına karşı optimistic concurrency.
         // Postgres'in her satırda tuttuğu gizli xmin sistem kolonunu sürüm
@@ -84,6 +101,11 @@ public class ProductConfiguration : IEntityTypeConfiguration<Product>
         b.HasOne(x => x.Publisher)
          .WithMany(x => x.Products)
          .HasForeignKey(x => x.PublisherId)
+         .OnDelete(DeleteBehavior.SetNull);
+
+        b.HasOne(x => x.Brand)
+         .WithMany(x => x.Products)
+         .HasForeignKey(x => x.BrandId)
          .OnDelete(DeleteBehavior.SetNull);
 
         // Soft delete: silinmiş ürünler tüm sorgulardan otomatik düşer.
