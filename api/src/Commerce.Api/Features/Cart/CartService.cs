@@ -25,6 +25,17 @@ public sealed class CartService(
         return await BuildDtoAsync(rawItems, couponCode, ct);
     }
 
+    /// Sepetin ham hâli — sipariş servisi için. GetAsync'in yaptığı
+    /// kırpma/uyarı/fiyat tazeleme YOK.
+    public async Task<RawCart> GetRawAsync(CartOwner owner, CancellationToken ct = default)
+    {
+        var (items, couponCode) = owner.IsMember
+            ? await ReadMemberCartAsync(owner.UserId!.Value, ct)
+            : await ReadGuestCartAsync(owner.GuestId!, ct);
+
+        return new RawCart(items, couponCode);
+    }
+
     // ─────────────────────────────────────────────────────────
     // Ekleme
     // ─────────────────────────────────────────────────────────
@@ -309,9 +320,7 @@ public sealed class CartService(
     // ─────────────────────────────────────────────────────────
     // Yardımcılar
     // ─────────────────────────────────────────────────────────
-    private sealed record RawItem(int ProductId, int Quantity, decimal UnitPriceWhenAdded);
-
-    private async Task<(List<RawItem> Items, string? CouponCode)> ReadMemberCartAsync(
+    private async Task<(List<CartRawLine> Items, string? CouponCode)> ReadMemberCartAsync(
         Guid userId, CancellationToken ct)
     {
         var cart = await db.Carts
@@ -322,7 +331,7 @@ public sealed class CartService(
                 c.CouponCode,
                 // Deterministik sıra (K15): satırlar sepette görüldükleri sırada dursun.
                 Items = c.Items.OrderBy(i => i.Id)
-                               .Select(i => new RawItem(i.ProductId, i.Quantity, i.UnitPriceWhenAdded))
+                               .Select(i => new CartRawLine(i.ProductId, i.Quantity, i.UnitPriceWhenAdded))
                                .ToList()
             })
             .FirstOrDefaultAsync(ct);
@@ -330,11 +339,11 @@ public sealed class CartService(
         return (cart?.Items ?? [], cart?.CouponCode);
     }
 
-    private async Task<(List<RawItem> Items, string? CouponCode)> ReadGuestCartAsync(
+    private async Task<(List<CartRawLine> Items, string? CouponCode)> ReadGuestCartAsync(
         string guestId, CancellationToken ct)
     {
         var cart = await guestCarts.GetAsync(guestId, ct);
-        return (cart.Items.Select(i => new RawItem(i.ProductId, i.Quantity, i.UnitPriceWhenAdded)).ToList(),
+        return (cart.Items.Select(i => new CartRawLine(i.ProductId, i.Quantity, i.UnitPriceWhenAdded)).ToList(),
                 cart.CouponCode);
     }
 
@@ -342,7 +351,7 @@ public sealed class CartService(
     /// taze okunur — depoda saklanan fiyata güvenilmez. GET her zaman GÜVENLİ:
     /// bu metot hiçbir koşulda veritabanına/Redis'e YAZMAZ.
     private async Task<CartDto> BuildDtoAsync(
-        List<RawItem> rawItems, string? couponCode, CancellationToken ct)
+        List<CartRawLine> rawItems, string? couponCode, CancellationToken ct)
     {
         if (rawItems.Count == 0)
             return new CartDto([], null, 0m, 0m, 0m, 0m,

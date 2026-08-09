@@ -5,6 +5,7 @@ using Commerce.Api.Common.OpenApi;
 using Commerce.Api.Features.Auth;
 using Commerce.Api.Features.Cart;
 using Commerce.Api.Features.Catalog;
+using Commerce.Api.Features.Orders;
 using Commerce.Api.Features.Search;
 using Commerce.Api.Persistence;
 using Commerce.Api.Persistence.Identity;
@@ -174,6 +175,12 @@ builder.Services.AddScoped<CartService>();
 builder.Services.AddSingleton<IGuestCartStore, DistributedGuestCartStore>();
 
 // ─────────────────────────────────────────────────────────────
+// Sipariş (Faz 7)
+// ─────────────────────────────────────────────────────────────
+builder.Services.AddScoped<OrderService>();
+builder.Services.AddScoped<AddressService>();
+
+// ─────────────────────────────────────────────────────────────
 // CORS
 // ─────────────────────────────────────────────────────────────
 const string CorsPolicy = "DefaultCors";
@@ -227,6 +234,15 @@ if (!isTesting)
                 PermitLimit = 60,
                 Window = TimeSpan.FromMinutes(1),
                 QueueLimit = 0
+            }));
+
+        // Sipariş: IP başına dakikada 20. Kimlik doğrulanmış olsa da
+        // sipariş oluşturma en pahalı yazma yolu (transaction + stok kilidi).
+        options.AddPolicy("orders", ctx => RateLimitPartition.GetFixedWindowLimiter(
+            ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 20, Window = TimeSpan.FromMinutes(1), QueueLimit = 0
             }));
     });
 }
@@ -343,6 +359,12 @@ app.MapAuthEndpoints();
 // Sepet endpoint'leri (Faz 6)
 // ─────────────────────────────────────────────────────────────
 app.MapCartEndpoints();
+
+// ─────────────────────────────────────────────────────────────
+// Sipariş ve adres endpoint'leri (Faz 7)
+// ─────────────────────────────────────────────────────────────
+app.MapOrderEndpoints();
+app.MapAddressEndpoints();
 
 app.Run();
 

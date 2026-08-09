@@ -28,3 +28,9 @@ public sealed record CartDto(
 public sealed record AddCartItemRequest(int ProductId, int Quantity);
 public sealed record UpdateCartItemRequest(int Quantity);
 public sealed record ApplyCouponRequest(string Code);
+
+/// Sepetin DEPODAKİ hâli: kırpma yok, uyarı yok, fiyat tazeleme yok.
+/// Faz 7 sipariş oluştururken kullanıcının GERÇEKTEN istediği adedi görmek
+/// zorunda (CartDto adedi stoğa kırpar — plan ölçüm 2.3).
+public sealed record CartRawLine(int ProductId, int Quantity, decimal UnitPriceWhenAdded);
+public sealed record RawCart(IReadOnlyList<CartRawLine> Items, string? CouponCode);

@@ -29,6 +29,14 @@ public class Order : IAuditable
     /// Idempotency: onay maili iki kez gitmesin (Faz 9).
     public DateTime? ConfirmationEmailSentAt { get; set; }
 
+    /// İstemcinin ürettiği tekil anahtar. Aynı anahtarla ikinci istek gelirse
+    /// yeni sipariş oluşturmaz, mevcut olanı döndürür.
+    public string? IdempotencyKey { get; set; }
+
+    /// Müşteri notu (kapıya bırak, zile basma…). Sipariş oluşurken alınır,
+    /// sonradan değiştirilemez.
+    public string? Note { get; set; }
+
     public ICollection<OrderItem> Items { get; set; } = [];
     public ICollection<Payment> Payments { get; set; } = [];
 }

@@ -1,4 +1,5 @@
 using Commerce.Api.Common.Exceptions;
+using Commerce.Domain.Common;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -22,6 +23,7 @@ public sealed class GlobalExceptionHandler(
             UnauthorizedException => (StatusCodes.Status401Unauthorized, "Kimlik doğrulanamadı"),
             NotFoundException => (StatusCodes.Status404NotFound, "Kayıt bulunamadı"),
             ForbiddenException => (StatusCodes.Status403Forbidden, "Bu işlem için yetkiniz yok"),
+            DomainRuleException => (StatusCodes.Status400BadRequest, "İşlem gerçekleştirilemedi"),
             BusinessRuleException => (StatusCodes.Status400BadRequest, "İşlem gerçekleştirilemedi"),
             ConflictException => (StatusCodes.Status409Conflict, "Çakışan kayıt"),
             DbUpdateConcurrencyException => (StatusCodes.Status409Conflict, "Kayıt başka biri tarafından değiştirildi"),

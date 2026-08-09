@@ -50,11 +50,21 @@ public class OrderConfiguration : IEntityTypeConfiguration<Order>
     {
         b.Property(x => x.OrderNumber).HasMaxLength(30).IsRequired();
         b.Property(x => x.CouponCode).HasMaxLength(50);
+        b.Property(x => x.IdempotencyKey).HasMaxLength(64);
+        b.Property(x => x.Note).HasMaxLength(500);
 
         b.HasIndex(x => x.OrderNumber).IsUnique();
         b.HasIndex(x => x.UserId);
         b.HasIndex(x => x.CreatedAt);
         b.HasIndex(x => x.Status);
+
+        // Aynı kullanıcı + aynı anahtar = tek sipariş. Uygulama katmanı hata
+        // yapsa da ikinci kayıt oluşamaz. Filtreli: anahtar göndermeyen
+        // istekler kısıtlamaya takılmaz (Postgres'te çoklu NULL zaten çakışmaz,
+        // filtre indeksi de küçültüyor — Sku'daki kalıbın aynısı).
+        b.HasIndex(x => new { x.UserId, x.IdempotencyKey })
+         .IsUnique()
+         .HasFilter("\"IdempotencyKey\" IS NOT NULL");
 
         // Owned type: ayrı tablo değil, Orders tablosunda
         // ShippingAddress_FullName gibi kolonlar olarak durur.
