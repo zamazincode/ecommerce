@@ -22,6 +22,12 @@ public class CartItem
     public int Quantity { get; set; }
     public DateTime CreatedAt { get; set; }
 
+    /// Sepete eklendiği andaki efektif fiyat. SADECE "fiyat değişti" uyarısı için.
+    /// Hesaplamada ASLA kullanılmaz — sepette fiyat dondurmak istismara açıktır
+    /// (100₺'yken ekle, 500₺ olunca 100₺'den al).
+    /// 0 = "bilinmiyor" (eski kayıt) → uyarı üretilmez.
+    public decimal UnitPriceWhenAdded { get; set; }
+
     public Cart Cart { get; set; } = null!;
     public Product Product { get; set; } = null!;
 }

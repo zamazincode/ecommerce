@@ -3,6 +3,7 @@ using Commerce.Api.Common.Email;
 using Commerce.Api.Common.Handlers;
 using Commerce.Api.Common.OpenApi;
 using Commerce.Api.Features.Auth;
+using Commerce.Api.Features.Cart;
 using Commerce.Api.Features.Catalog;
 using Commerce.Api.Features.Search;
 using Commerce.Api.Persistence;
@@ -67,6 +68,13 @@ builder.Services
 // ─────────────────────────────────────────────────────────────
 // Cache — HybridCache: L1 bellek + L2 Redis
 // ─────────────────────────────────────────────────────────────
+// IDistributedCache — misafir sepetinin GERÇEK deposu, cache değil.
+// AddHybridCache bunu KAYDETMİYOR (ölçüldü): bu satır olmadan Testing
+// ortamında DistributedGuestCartStore çözülemez, her sepet isteği 500 olur.
+// AddDistributedMemoryCache TryAdd kullanıyor, AddStackExchangeRedisCache düz
+// AddSingleton — sıra ne olursa olsun Redis yapılandırılmışsa Redis kazanır.
+builder.Services.AddDistributedMemoryCache();
+
 if (!isTesting)
 {
     var redisConnection = builder.Configuration.GetConnectionString("Redis");
@@ -159,6 +167,13 @@ builder.Services.AddScoped<CatalogService>();
 builder.Services.AddScoped<ISearchService, PostgresSearchService>();
 
 // ─────────────────────────────────────────────────────────────
+// Sepet (Faz 6)
+// ─────────────────────────────────────────────────────────────
+builder.Services.AddScoped<CartService>();
+// Durumsuz sarmalayıcı; bağımlılıkları (IDistributedCache, ILogger) singleton.
+builder.Services.AddSingleton<IGuestCartStore, DistributedGuestCartStore>();
+
+// ─────────────────────────────────────────────────────────────
 // CORS
 // ─────────────────────────────────────────────────────────────
 const string CorsPolicy = "DefaultCors";
@@ -202,6 +217,17 @@ if (!isTesting)
                 Window = TimeSpan.FromMinutes(1),
                 QueueLimit = 0
             }));
+
+        // Sepet: IP başına dakikada 60. Misafir sepeti tamamen anonim
+        // yazılabiliyor (X-Guest-Id'yi istemci üretiyor) — ikinci katman.
+        options.AddPolicy("cart", ctx => RateLimitPartition.GetFixedWindowLimiter(
+            ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 60,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0
+            }));
     });
 }
 
@@ -239,6 +265,11 @@ if (args.Contains("import"))
     await CatalogImportCommand.RunAsync(scope.ServiceProvider, app.Environment, args);
     return;
 }
+
+if (!isTesting && string.IsNullOrWhiteSpace(builder.Configuration.GetConnectionString("Redis")))
+    app.Logger.LogWarning(
+        "Redis yapılandırılmamış. Misafir sepetleri uygulama belleğinde tutulacak: " +
+        "uygulama yeniden başlayınca ve ikinci bir sunucuda sepetler kaybolur.");
 
 // Sıra önemli: hata yakalayıcı EN ÜSTTE olmalı ki altındaki her şeyi sarsın.
 app.UseExceptionHandler();
@@ -307,6 +338,11 @@ app.MapSearchEndpoints();
 // Kimlik doğrulama endpoint'leri (Faz 5)
 // ─────────────────────────────────────────────────────────────
 app.MapAuthEndpoints();
+
+// ─────────────────────────────────────────────────────────────
+// Sepet endpoint'leri (Faz 6)
+// ─────────────────────────────────────────────────────────────
+app.MapCartEndpoints();
 
 app.Run();
 
