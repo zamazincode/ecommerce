@@ -17,7 +17,7 @@ public sealed class AuthService(
     RoleManager<ApplicationRole> roleManager,
     AppDbContext db,
     TokenService tokens,
-    IEmailService email,
+    NotificationEmailSender notifications,
     TimeProvider clock,
     IOptions<WebAppSettings> webOptions,
     ILogger<AuthService> logger)
@@ -194,17 +194,11 @@ public sealed class AuthService(
         var token = await userManager.GeneratePasswordResetTokenAsync(user);
         var encoded = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(token));
         var baseUrl = webOptions.Value.BaseUrl;
+        var url = $"{baseUrl}/sifre-sifirla?email={Uri.EscapeDataString(user.Email!)}&token={encoded}";
 
         await TrySendEmailAsync(
-            user.Email!,
-            "Şifre sıfırlama",
-            $"""
-             <p>Merhaba {user.FirstName},</p>
-             <p>Şifrenizi sıfırlamak için aşağıdaki bağlantıya tıklayın:</p>
-             <p><a href="{baseUrl}/sifre-sifirla?email={Uri.EscapeDataString(user.Email!)}&token={encoded}">Şifremi sıfırla</a></p>
-             <p>Bu talebi siz yapmadıysanız bu maili yok sayın.</p>
-             """,
-            ct);
+            () => notifications.SendPasswordResetAsync(user.Email!, user.FirstName ?? "Müşteri", url, ct),
+            user.Email!);
     }
 
     public async Task ResetPasswordAsync(ResetPasswordRequest request, CancellationToken ct)
@@ -305,30 +299,27 @@ public sealed class AuthService(
         var token = await userManager.GenerateEmailConfirmationTokenAsync(user);
         var encoded = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(token));
         var baseUrl = webOptions.Value.BaseUrl;
+        var url = $"{baseUrl}/eposta-dogrula?email={Uri.EscapeDataString(user.Email!)}&token={encoded}";
 
         await TrySendEmailAsync(
-            user.Email!,
-            "E-posta adresinizi doğrulayın",
-            $"""
-             <p>Merhaba {user.FirstName}, aramıza hoş geldiniz.</p>
-             <p><a href="{baseUrl}/eposta-dogrula?email={Uri.EscapeDataString(user.Email!)}&token={encoded}">E-postamı doğrula</a></p>
-             """,
-            ct);
+            () => notifications.SendEmailConfirmationAsync(user.Email!, user.FirstName ?? "Müşteri", url, ct),
+            user.Email!);
     }
 
-    /// Mail gönderimi auth akışını asla kıramaz (K11). Bugün ConsoleEmailService
-    /// hiç atmıyor, ama Faz 9'da SMTP hatası kayıt olmayı/şifre sıfırlamayı
-    /// engellememeli — kullanıcı zaten oluşturuldu/token üretildi, mail yeniden
-    /// gönderilebilir.
-    private async Task TrySendEmailAsync(string to, string subject, string htmlBody, CancellationToken ct)
+    /// Mail gönderimi auth akışını asla kıramaz (K11) — kullanıcı zaten
+    /// oluşturuldu/token üretildi, mail yeniden gönderilebilir.
+    /// Kayıt/şifre sıfırlama mailleri BİLEREK senkron kalıyor (Enqueue edilmiyor):
+    /// AuthEndpointTests token'ı doğrudan mail gövdesinden okuyor, Testing'de
+    /// Hangfire worker'ı kapalı olduğu için job hiç çalışmazdı.
+    private async Task TrySendEmailAsync(Func<Task> send, string to)
     {
         try
         {
-            await email.SendAsync(to, subject, htmlBody, ct);
+            await send();
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            logger.LogWarning(ex, "Mail gönderilemedi. Alıcı: {To}, Konu: {Subject}", to, subject);
+            logger.LogWarning(ex, "Mail gönderilemedi. Alıcı: {To}", to);
         }
     }
 

@@ -3,15 +3,20 @@ using Commerce.Api.Common.Email;
 using Commerce.Api.Common.Handlers;
 using Commerce.Api.Common.OpenApi;
 using Commerce.Api.Features.Auth;
+using Commerce.Api.Features.BackgroundJobs;
 using Commerce.Api.Features.Cart;
 using Commerce.Api.Features.Catalog;
 using Commerce.Api.Features.Orders;
+using Commerce.Api.Features.Payments;
 using Commerce.Api.Features.Search;
 using Commerce.Api.Persistence;
 using Commerce.Api.Persistence.Identity;
 using Commerce.Api.Persistence.Seeding;
 using Commerce.Api.Persistence.Seeding.Import;
 using FluentValidation;
+using Hangfire;
+using Hangfire.Dashboard;
+using Hangfire.PostgreSql;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Identity;
@@ -21,6 +26,7 @@ using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.IdentityModel.Tokens;
 using Scalar.AspNetCore;
 using Serilog;
+using Serilog.Events;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -153,7 +159,6 @@ builder.Services.AddAuthorizationBuilder()
 
 builder.Services.AddScoped<TokenService>();
 builder.Services.AddScoped<AuthService>();
-builder.Services.AddScoped<IEmailService, ConsoleEmailService>();
 
 // ─────────────────────────────────────────────────────────────
 // Özellik servisleri (Faz 3)
@@ -179,6 +184,69 @@ builder.Services.AddSingleton<IGuestCartStore, DistributedGuestCartStore>();
 // ─────────────────────────────────────────────────────────────
 builder.Services.AddScoped<OrderService>();
 builder.Services.AddScoped<AddressService>();
+
+// ─────────────────────────────────────────────────────────────
+// Ödeme (Faz 8)
+// ─────────────────────────────────────────────────────────────
+builder.Services.AddOptions<PaymentSettings>()
+    .Bind(builder.Configuration.GetSection(PaymentSettings.SectionName));
+builder.Services.AddOptions<IyzicoSettings>()
+    .Bind(builder.Configuration.GetSection(IyzicoSettings.SectionName));
+
+builder.Services.AddScoped<PaymentService>();
+
+var useFakePayments = isTesting || string.IsNullOrWhiteSpace(builder.Configuration["Iyzico:ApiKey"]);
+
+// K11 — Faz 5'teki Jwt:Key kararının aynısı: eksikse SESSİZCE devam etme.
+if (useFakePayments && !isTesting && !builder.Environment.IsDevelopment())
+    throw new InvalidOperationException(
+        "Iyzico:ApiKey tanımlı değil. Üretimde sahte ödeme sağlayıcısı kullanılamaz. " +
+        "dotnet user-secrets set \"Iyzico:ApiKey\" \"...\" --project api/src/Commerce.Api");
+
+if (useFakePayments)
+    builder.Services.AddSingleton<IPaymentProvider, FakePaymentProvider>();
+else
+    builder.Services.AddScoped<IPaymentProvider, IyzicoPaymentProvider>();
+
+// ─────────────────────────────────────────────────────────────
+// Mail (Faz 9)
+// ─────────────────────────────────────────────────────────────
+builder.Services.AddOptions<EmailSettings>()
+    .Bind(builder.Configuration.GetSection(EmailSettings.SectionName));
+// ValidateOnStart YOK: Testing'de okunan appsettings.json'da "Email" bölümü
+// yok (ölçüldü), her alanın anlamlı varsayılanı var.
+
+builder.Services.AddSingleton<EmailTemplateRenderer>();
+builder.Services.AddScoped<NotificationEmailSender>();
+
+// Faz 5'te ConsoleEmailService buradaydı. Arayüz değişmedi, implementasyon değişti.
+builder.Services.AddScoped<IEmailService, MailKitEmailService>();
+
+// ─────────────────────────────────────────────────────────────
+// Arka plan işleri (Faz 9)
+// ─────────────────────────────────────────────────────────────
+builder.Services.AddHangfire(config => config
+    .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
+    .UseSimpleAssemblyNameTypeSerializer()
+    .UseRecommendedSerializerSettings()
+    .UsePostgreSqlStorage(o => o.UseNpgsqlConnection(postgresConnection),
+        new PostgreSqlStorageOptions
+        {
+            // Varsayılan zaten "hangfire" — niyeti belgelemek için açık yazılıyor.
+            // Hangfire kendi tablolarını burada kurar, EF'in "public" şemasına
+            // karışmaz; dotnet ef bu şemayı GÖRMEZ.
+            SchemaName = "hangfire"
+        }));
+
+// AddHangfire TEK BAŞINA tembeldir: şema kurmaz, bağlanmaz (ölçüldü).
+// Storage ilk Enqueue'da ya da dashboard map edilirken kurulur.
+if (!isTesting)
+    builder.Services.AddHangfireServer(o => o.WorkerCount = Environment.ProcessorCount);
+
+builder.Services.AddScoped<OrderNotificationJobs>();
+builder.Services.AddScoped<CartReminderJobs>();
+builder.Services.AddScoped<CleanupJobs>();
+builder.Services.AddScoped<OrderExpiryJobs>();
 
 // ─────────────────────────────────────────────────────────────
 // CORS
@@ -244,6 +312,14 @@ if (!isTesting)
             {
                 PermitLimit = 20, Window = TimeSpan.FromMinutes(1), QueueLimit = 0
             }));
+
+        // Ödeme: IP başına dakikada 30. Başlatma iyzico'ya giden dış çağrı üretir.
+        options.AddPolicy("payments", ctx => RateLimitPartition.GetFixedWindowLimiter(
+            ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 30, Window = TimeSpan.FromMinutes(1), QueueLimit = 0
+            }));
     });
 }
 
@@ -287,6 +363,11 @@ if (!isTesting && string.IsNullOrWhiteSpace(builder.Configuration.GetConnectionS
         "Redis yapılandırılmamış. Misafir sepetleri uygulama belleğinde tutulacak: " +
         "uygulama yeniden başlayınca ve ikinci bir sunucuda sepetler kaybolur.");
 
+if (useFakePayments && !isTesting)
+    app.Logger.LogWarning(
+        "ÖDEMELER SAHTE SAĞLAYICI İLE İŞLENİYOR. Gerçek tahsilat yapılmıyor. " +
+        "Iyzico:ApiKey / Iyzico:SecretKey User Secrets'a girilirse iyzico devreye girer.");
+
 // Sıra önemli: hata yakalayıcı EN ÜSTTE olmalı ki altındaki her şeyi sarsın.
 app.UseExceptionHandler();
 
@@ -299,6 +380,13 @@ app.UseSerilogRequestLogging(options =>
         diag.Set("TraceId", http.TraceIdentifier);
         diag.Set("UserId", http.User.FindFirst(JwtClaims.Sub)?.Value);
     };
+
+    // Açık bir dashboard sekmesi dakikada ~30 istek üretiyor (StatsPollingInterval).
+    // Seq'i bunlarla doldurma.
+    options.GetLevel = (http, _, ex) =>
+        ex is not null ? LogEventLevel.Error
+        : http.Request.Path.StartsWithSegments("/hangfire") ? LogEventLevel.Verbose
+        : LogEventLevel.Information;
 });
 
 app.UseCors(CorsPolicy);
@@ -365,6 +453,49 @@ app.MapCartEndpoints();
 // ─────────────────────────────────────────────────────────────
 app.MapOrderEndpoints();
 app.MapAddressEndpoints();
+
+// ─────────────────────────────────────────────────────────────
+// Ödeme endpoint'leri (Faz 8)
+// ─────────────────────────────────────────────────────────────
+app.MapPaymentEndpoints();
+
+// ─────────────────────────────────────────────────────────────
+// Hangfire dashboard (Faz 9)
+// ─────────────────────────────────────────────────────────────
+// Testing'de MAP EDİLMEZ: MapHangfireDashboard JobStorage'ı map anında çözüyor
+// ve "hangfire" şemasını kuruyor (ölçüldü) — her test host'u bunu ödemesin.
+if (!isTesting)
+{
+    app.MapHangfireDashboard("/hangfire", new DashboardOptions
+    {
+        DashboardTitle = "Commerce — Arka Plan İşleri",
+        Authorization = [new HangfireDashboardAuthorizationFilter(app.Environment.IsDevelopment())],
+        // VARSAYILAN true: Postgres bağlantı dizesini şifresiyle ekrana basar.
+        DisplayStorageConnectionString = false,
+        // Varsayılan 2000 ms → dakikada 30 istek, global limiter 200/dk.
+        StatsPollingInterval = 10_000
+    })
+    .DisableRateLimiting()
+    .ExcludeFromDescription();
+}
+
+if (!isTesting)
+{
+    // Statik RecurringJob.AddOrUpdate JobStorage.Current'a (global) yazar;
+    // DI'daki manager host'un kendi storage'ını kullanır.
+    var recurring = app.Services.GetRequiredService<IRecurringJobManager>();
+
+    recurring.AddOrUpdate<CleanupJobs>(
+        "purge-expired-refresh-tokens",
+        j => j.PurgeExpiredRefreshTokensAsync(),
+        Cron.Daily(3, 30));
+
+    // Ödenmemiş sipariş stoğu rezerve tutuyor — 10 dakikada bir tara.
+    recurring.AddOrUpdate<OrderExpiryJobs>(
+        "cancel-expired-pending-orders",
+        j => j.CancelExpiredPendingOrdersAsync(),
+        "*/10 * * * *");
+}
 
 app.Run();
 

@@ -1,0 +1,14 @@
+<p>Merhaba {{ ad | html.escape }},</p>
+<p>Sepetinizde sizi bekleyen ürünler var:</p>
+<ul>
+{{ for urun in urunler }}
+<li>{{ urun | html.escape }}</li>
+{{ end }}
+</ul>
+<table role="presentation" cellpadding="0" cellspacing="0">
+<tr>
+<td style="background-color:#111827;border-radius:6px;">
+<a href="{{ sepet_url }}" style="display:inline-block;padding:12px 24px;color:#ffffff;text-decoration:none;font-weight:bold;">Sepetime dön</a>
+</td>
+</tr>
+</table>

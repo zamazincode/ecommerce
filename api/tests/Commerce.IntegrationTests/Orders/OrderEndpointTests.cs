@@ -559,7 +559,7 @@ public class OrderEndpointTests(DatabaseFixture fixture) : IntegrationTestBase(f
         var service = scope.ServiceProvider.GetRequiredService<OrderService>();
 
         await Should.ThrowAsync<InvalidOrderStatusTransitionException>(
-            () => service.ChangeStatusAsync(created!.OrderNumber, OrderStatus.Pending, Ct));
+            () => service.ChangeStatusAsync(created!.OrderNumber, OrderStatus.Pending, ct: Ct));
     }
 
     [Fact]
@@ -582,7 +582,7 @@ public class OrderEndpointTests(DatabaseFixture fixture) : IntegrationTestBase(f
 
         using var scope = Factory.Services.CreateScope();
         var service = scope.ServiceProvider.GetRequiredService<OrderService>();
-        await service.ChangeStatusAsync(created!.OrderNumber, OrderStatus.Refunded, Ct);
+        await service.ChangeStatusAsync(created!.OrderNumber, OrderStatus.Refunded, ct: Ct);
 
         var stockAfterRefund = await ExecuteDbAsync(db =>
             db.Products.Where(p => p.Id == productId).Select(p => p.Stock).FirstAsync());

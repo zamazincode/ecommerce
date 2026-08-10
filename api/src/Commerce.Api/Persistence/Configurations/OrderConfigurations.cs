@@ -111,6 +111,7 @@ public class PaymentConfiguration : IEntityTypeConfiguration<Payment>
     {
         b.Property(x => x.Provider).HasMaxLength(50).IsRequired();
         b.Property(x => x.ProviderTransactionId).HasMaxLength(200);
+        b.Property(x => x.ProviderReference).HasMaxLength(200);   // konvansiyon 512 verirdi
         b.Property(x => x.RawResponse).HasMaxLength(20000);
 
         // Idempotency'nin veritabanı seviyesindeki garantisi:
@@ -118,6 +119,12 @@ public class PaymentConfiguration : IEntityTypeConfiguration<Payment>
         b.HasIndex(x => x.ProviderTransactionId)
          .IsUnique()
          .HasFilter("\"ProviderTransactionId\" IS NOT NULL");
+
+        // Callback tek bir ödeme kaydını FirstOrDefaultAsync ile bulmalı —
+        // aynı token iki satıra bağlanamamalı.
+        b.HasIndex(x => x.ProviderReference)
+         .IsUnique()
+         .HasFilter("\"ProviderReference\" IS NOT NULL");
 
         b.HasOne(x => x.Order)
          .WithMany(x => x.Payments)

@@ -1,0 +1,29 @@
+<p>Merhaba {{ ad | html.escape }},</p>
+<p>Siparişiniz alındı. Sipariş numaranız: <strong>{{ siparis_no }}</strong></p>
+<table role="presentation" width="100%" cellpadding="8" cellspacing="0" style="border-collapse:collapse;margin:16px 0;">
+<tr style="background-color:#f3f4f6;">
+<td style="text-align:left;">Ürün</td>
+<td style="text-align:center;">Adet</td>
+<td style="text-align:right;">Tutar</td>
+</tr>
+{{ for kalem in kalemler }}
+<tr>
+<td style="border-bottom:1px solid #e5e7eb;">{{ kalem.ad | html.escape }}</td>
+<td style="border-bottom:1px solid #e5e7eb;text-align:center;">{{ kalem.adet }}</td>
+<td style="border-bottom:1px solid #e5e7eb;text-align:right;">{{ kalem.tutar }}</td>
+</tr>
+{{ end }}
+</table>
+<table role="presentation" width="100%" cellpadding="4" cellspacing="0">
+<tr><td>Ara toplam</td><td style="text-align:right;">{{ ara_toplam }}</td></tr>
+<tr><td>İndirim</td><td style="text-align:right;">{{ indirim }}</td></tr>
+<tr><td>Kargo</td><td style="text-align:right;">{{ kargo }}</td></tr>
+<tr><td style="font-weight:bold;">Toplam</td><td style="text-align:right;font-weight:bold;">{{ toplam }}</td></tr>
+</table>
+<table role="presentation" cellpadding="0" cellspacing="0">
+<tr>
+<td style="background-color:#111827;border-radius:6px;">
+<a href="{{ siparis_url }}" style="display:inline-block;padding:12px 24px;color:#ffffff;text-decoration:none;font-weight:bold;">Siparişimi görüntüle</a>
+</td>
+</tr>
+</table>

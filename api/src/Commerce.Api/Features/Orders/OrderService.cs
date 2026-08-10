@@ -1,12 +1,14 @@
 using Commerce.Api.Common.Exceptions;
 using Commerce.Api.Common.Extensions;
 using Commerce.Api.Common.Results;
+using Commerce.Api.Features.BackgroundJobs;
 using Commerce.Api.Features.Cart;
 using Commerce.Api.Features.Orders.Dtos;
 using Commerce.Api.Persistence;
 using Commerce.Domain.Common;
 using Commerce.Domain.Orders;
 using Commerce.Domain.Pricing;
+using Hangfire;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 
@@ -16,6 +18,7 @@ public sealed class OrderService(
     AppDbContext db,
     CartService cartService,
     AddressService addressService,
+    IBackgroundJobClient backgroundJobs,
     TimeProvider clock,
     ILogger<OrderService> logger)
 {
@@ -255,9 +258,8 @@ public sealed class OrderService(
             "Sipariş oluşturuldu: {OrderNumber}, tutar {Total}, kullanıcı {UserId}",
             order.OrderNumber, order.Total, userId);
 
-        // Faz 9: backgroundJobs.Enqueue<IEmailService>(x => x.SendOrderConfirmationAsync(order.Id));
-        // DİKKAT: commit'ten SONRA. Rollback olsaydı, kuyruğa atılmış "siparişiniz
-        // alındı" maili yine de giderdi.
+        // Onay maili burada DEĞİL — sipariş oluşunca değil, ödeme başarılı olunca
+        // gider (PaymentService.CompleteAsync). Sipariş Pending doğar.
 
         return ToDetailDto(order);
     }
@@ -331,8 +333,15 @@ public sealed class OrderService(
     }
 
     /// Faz 8 (Paid) ve Faz 11 (admin) bunu kullanacak — durum geçişi TEK yoldan.
+    ///
+    /// expectedCurrentStatus (Faz 9): OrderExpiryJobs "hâlâ Pending mi" diye
+    /// kontrol ederken araya bir ödeme callback'i girip siparişi Paid yapabilir.
+    /// Paid->Cancelled geçerli bir geçiş olduğu için bu kontrol olmadan job az
+    /// önce ödenmiş bir siparişi sessizce iptal eder — gerçek para kaybı.
     public async Task<OrderDetailDto> ChangeStatusAsync(
-        string orderNumber, OrderStatus newStatus, CancellationToken ct = default)
+        string orderNumber, OrderStatus newStatus,
+        OrderStatus? expectedCurrentStatus = null,
+        CancellationToken ct = default)
     {
         await using var transaction = await db.Database.BeginTransactionAsync(ct);
 
@@ -340,6 +349,10 @@ public sealed class OrderService(
             .Include(o => o.Items)
             .FirstOrDefaultAsync(o => o.OrderNumber == orderNumber, ct)
             ?? throw NotFoundException.For("Sipariş", orderNumber);
+
+        if (expectedCurrentStatus is { } expected && order.Status != expected)
+            throw new ConflictException(
+                $"Sipariş '{order.Status}' durumunda; beklenen '{expected}'.");
 
         OrderStatusTransition.EnsureCanTransition(order.Status, newStatus);
 
@@ -351,6 +364,11 @@ public sealed class OrderService(
 
         await db.SaveChangesAsync(ct);
         await transaction.CommitAsync(ct);
+
+        // Enqueue daima commit'ten SONRA (K9): Hangfire EF transaction'ına dahil
+        // değil, rollback olsa bile kuyruğa atılan job kalırdı.
+        if (newStatus == OrderStatus.Shipped)
+            backgroundJobs.Enqueue<OrderNotificationJobs>(j => j.SendShippedNotificationAsync(order.Id));
 
         return ToDetailDto(order);
     }

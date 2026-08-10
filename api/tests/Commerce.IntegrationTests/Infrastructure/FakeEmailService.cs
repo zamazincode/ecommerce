@@ -11,9 +11,16 @@ public sealed class FakeEmailService : IEmailService
 {
     public ConcurrentBag<SentEmail> SentEmails { get; } = [];
 
+    /// "Mail patlarsa damga atılmamalı" testi için (K4'ün sırasını kilitler).
+    public bool ThrowOnSend { get; set; }
+
     public Task SendAsync(string to, string subject, string htmlBody, CancellationToken ct = default)
     {
+        if (ThrowOnSend) throw new InvalidOperationException("SMTP hatası (test).");
+
         SentEmails.Add(new SentEmail(to, subject, htmlBody));
         return Task.CompletedTask;
     }
+
+    public void Clear() => SentEmails.Clear();
 }

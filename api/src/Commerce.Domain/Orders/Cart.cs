@@ -11,6 +11,11 @@ public class Cart : IAuditable
     public DateTime CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }
 
+    /// Sepet hatırlatma maili en son ne zaman gitti (Faz 9).
+    /// ReminderSentAt <= UpdatedAt ise sepet o mailden sonra DEĞİŞMİŞ demektir,
+    /// yeni bir hatırlatma hak edilmiştir (K6).
+    public DateTime? ReminderSentAt { get; set; }
+
     public ICollection<CartItem> Items { get; set; } = [];
 }
 

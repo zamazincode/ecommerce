@@ -1,4 +1,6 @@
 using Commerce.Api.Common.Email;
+using Commerce.Api.Features.Payments;
+using Hangfire;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 // ConfigureTestServices bu namespace'te. Mvc.Testing paketiyle geliyor
@@ -15,6 +17,8 @@ public sealed class CustomWebApplicationFactory(string connectionString)
     : WebApplicationFactory<Program>
 {
     public FakeEmailService EmailService { get; } = new();
+    public FakePaymentProvider PaymentProvider { get; } = new();
+    public RecordingBackgroundJobClient BackgroundJobs { get; } = new();
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
@@ -42,7 +46,16 @@ public sealed class CustomWebApplicationFactory(string connectionString)
             services.RemoveAll<IEmailService>();
             services.AddSingleton<IEmailService>(EmailService);
 
-            // Faz 8/10'da: IPaymentProvider, IImageStorage
+            // DIŞ DÜNYA SINIRI: gerçek iyzico çağrısı gitmesin, ama "ne gönderdik /
+            // kaç kez sorduk" diye sorabilelim.
+            services.RemoveAll<IPaymentProvider>();
+            services.AddSingleton<IPaymentProvider>(PaymentProvider);
+
+            // DIŞ DÜNYA SINIRI: gerçek kuyruğa yazma, ama "ne kuyruğa girdi" diye sorabil.
+            services.RemoveAll<IBackgroundJobClient>();
+            services.AddSingleton<IBackgroundJobClient>(BackgroundJobs);
+
+            // Faz 10'da: IImageStorage
         });
     }
 }

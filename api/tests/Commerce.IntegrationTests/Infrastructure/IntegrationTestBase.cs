@@ -4,6 +4,7 @@ using Commerce.Api.Features.Auth.Dtos;
 using Commerce.Api.Persistence;
 using Commerce.Api.Persistence.Identity;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Commerce.IntegrationTests.Infrastructure;
@@ -43,6 +44,20 @@ public abstract class IntegrationTestBase(DatabaseFixture fixture) : IAsyncLifet
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         return await action(db);
+    }
+
+    /// Birden fazla bağımlılığı olan servisleri (job sınıfları gibi) scope içinde
+    /// çözüp çalıştırmak için.
+    protected async Task ExecuteScopedAsync(Func<IServiceProvider, Task> action)
+    {
+        using var scope = Factory.Services.CreateScope();
+        await action(scope.ServiceProvider);
+    }
+
+    protected async Task<T> ExecuteScopedAsync<T>(Func<IServiceProvider, Task<T>> action)
+    {
+        using var scope = Factory.Services.CreateScope();
+        return await action(scope.ServiceProvider);
     }
 
     /// Kullanıcı oluşturur, giriş yapar, Client'a Bearer token'ı yerleştirir.
@@ -101,6 +116,14 @@ public abstract class IntegrationTestBase(DatabaseFixture fixture) : IAsyncLifet
 
     protected void ClearAuthentication()
         => Client.DefaultRequestHeaders.Authorization = null;
+
+    /// Callback/webhook 302 döndürüyor. Varsayılan test istemcisi yönlendirmeyi
+    /// OTOMATİK takip eder (AllowAutoRedirect varsayılanı true) ve
+    /// http://localhost:3000/... isteği TestServer'a düşüp 404 olur; durum kodu
+    /// iddiaları sessizce yanlış nesneye bakar. Yönlendirmeyi görmek isteyen test
+    /// bu istemciyi kullanır.
+    protected HttpClient CreateNoRedirectClient()
+        => Factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
 
     /// Testin kendi HttpClient'ını kirletmeden başka bir kullanıcı adına
     /// istek atmak için (örn. Customer token'ıyla admin endpoint'i denemek).

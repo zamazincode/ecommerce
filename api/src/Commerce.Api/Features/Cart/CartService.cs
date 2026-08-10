@@ -1,8 +1,10 @@
 using Commerce.Api.Common.Exceptions;
+using Commerce.Api.Features.BackgroundJobs;
 using Commerce.Api.Features.Cart.Dtos;
 using Commerce.Api.Persistence;
 using Commerce.Domain.Orders;
 using Commerce.Domain.Pricing;
+using Hangfire;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 
@@ -11,6 +13,7 @@ namespace Commerce.Api.Features.Cart;
 public sealed class CartService(
     AppDbContext db,
     IGuestCartStore guestCarts,
+    IBackgroundJobClient backgroundJobs,
     TimeProvider clock)
 {
     // ─────────────────────────────────────────────────────────
@@ -82,6 +85,12 @@ public sealed class CartService(
 
             cart.UpdatedAt = clock.GetUtcNow().UtcDateTime;
             await db.SaveChangesAsync(ct);
+
+            // 24 saat sonra hâlâ sipariş verilmediyse hatırlatma maili (K6'nın
+            // tekilleştirmesi CartReminderJobs'ta — burada koşulsuz planlanır).
+            // Misafir dalında BİLEREK yok: Redis'te, e-posta adresi yok.
+            backgroundJobs.Schedule<CartReminderJobs>(
+                j => j.SendReminderAsync(owner.UserId!.Value), TimeSpan.FromHours(24));
         }
         else
         {
