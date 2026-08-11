@@ -1,6 +1,7 @@
 using Commerce.Api.Common.Caching;
 using Commerce.Api.Common.Exceptions;
 using Commerce.Api.Common.Extensions;
+using Commerce.Api.Common.Images;
 using Commerce.Api.Features.Catalog;
 using Commerce.Api.Persistence;
 using Commerce.Domain.Common;
@@ -15,7 +16,8 @@ public sealed class PostgresSearchService(
     AppDbContext db,
     CategoryService categories,
     HybridCache cache,
-    ILogger<PostgresSearchService> logger) : ISearchService
+    ILogger<PostgresSearchService> logger,
+    ProductImageUrls urls) : ISearchService
 {
     private const string TextConfig = "turkish";
 
@@ -62,7 +64,7 @@ public sealed class PostgresSearchService(
 
         // Kural: filtrele → sırala → sayfala → EN SONDA Select.
         var paged = await query
-            .Select(ProductService.ListProjection)
+            .Select(ProductService.ListProjection(urls))
             .ToPagedResultAsync(request.ToPageRequest(), ct);
 
         string? didYouMean = null;
@@ -110,7 +112,11 @@ public sealed class PostgresSearchService(
             .Select(p => new SuggestionDto(
                 p.Slug,
                 p.Name,
-                p.Images.OrderBy(i => i.DisplayOrder).Select(i => i.SourceUrl).FirstOrDefault()))
+                p.Images.OrderBy(i => i.DisplayOrder)
+                    .Select(i => i.IsMigrated && i.CloudinaryPublicId != null
+                        ? urls.ThumbnailPrefix + i.CloudinaryPublicId
+                        : i.SourceUrl)
+                    .FirstOrDefault()))
             .ToListAsync(ct);
 
     /// Sonuç dönmediğinde en yakın yazar/yayınevi adını öner.

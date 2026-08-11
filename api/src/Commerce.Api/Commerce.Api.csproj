@@ -8,6 +8,10 @@
     <PackageReference Include="AspNetCore.HealthChecks.NpgSql" Version="9.0.0" />
     <PackageReference Include="AspNetCore.HealthChecks.Redis" Version="9.0.0" />
     <PackageReference Include="Bogus" Version="35.6.5" />
+    <!-- Görsel altyapısı (Faz 10): sunucu tarafında imzalı yükleme + silme.
+         Tek geçişli bağımlılığı Newtonsoft.Json 13.0.3 — Iyzipay'in de zaten
+         çözdüğü sürüm, NU1903 riski yok. -->
+    <PackageReference Include="CloudinaryDotNet" Version="1.29.2" />
     <!-- Gerçek veri aktarımı (Faz 3b): .xlsx okur, akış tabanlı; ileride .xls
          gelirse de çalışır. windows-1252 kodlaması için gereken CodePages
          provider'ı .NET 10 paylaşılan çatısında zaten var, ayrı paket gerekmiyor

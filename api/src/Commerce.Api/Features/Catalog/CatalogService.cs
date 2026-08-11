@@ -1,5 +1,6 @@
 using Commerce.Api.Common.Caching;
 using Commerce.Api.Common.Exceptions;
+using Commerce.Api.Common.Images;
 using Commerce.Api.Features.Catalog.Dtos;
 using Commerce.Api.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -7,7 +8,8 @@ using Microsoft.Extensions.Caching.Hybrid;
 
 namespace Commerce.Api.Features.Catalog;
 
-public sealed class CatalogService(AppDbContext db, HybridCache cache, ProductService products)
+public sealed class CatalogService(
+    AppDbContext db, HybridCache cache, ProductService products, ProductImageUrls urls)
 {
     public async Task<AuthorDetailDto> GetAuthorBySlugAsync(
         string slug, CancellationToken ct = default)
@@ -53,13 +55,13 @@ public sealed class CatalogService(AppDbContext db, HybridCache cache, ProductSe
             ? []
             : await products.ActiveProducts()
                 .Where(p => bestsellerIds.Contains(p.Id))
-                .Select(ProductService.ListProjection)
+                .Select(ProductService.ListProjection(urls))
                 .ToListAsync(ct);
 
         var newArrivals = await products.ActiveProducts()
             .OrderByDescending(p => p.Id)
             .Take(12)
-            .Select(ProductService.ListProjection)
+            .Select(ProductService.ListProjection(urls))
             .ToListAsync(ct);
 
         // EffectivePrice ENTITY üzerinde kullanılamaz (veritabanında yok).
@@ -68,7 +70,7 @@ public sealed class CatalogService(AppDbContext db, HybridCache cache, ProductSe
             .Where(p => p.DiscountedPrice != null)
             .OrderBy(p => p.DiscountedPrice ?? p.Price)
             .Take(12)
-            .Select(ProductService.ListProjection)
+            .Select(ProductService.ListProjection(urls))
             .ToListAsync(ct);
 
         return new HomeDto(

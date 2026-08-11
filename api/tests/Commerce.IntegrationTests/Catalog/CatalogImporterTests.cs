@@ -392,4 +392,47 @@ public class CatalogImporterTests(DatabaseFixture fixture) : IntegrationTestBase
             (await db.Products.AnyAsync(p => p.Name == "Elle Eklenen", Ct)).ShouldBeTrue();
         });
     }
+
+    /// Faz 10 (2.6): --keep modu admin'in Cloudinary'ye yüklediği görselleri
+    /// SİLMEMELİ. ApplyImages sadece IsMigrated=false (D&R kaynaklı) satırları
+    /// yönetiyor olmalı — bu test kırılırsa importer admin görsellerini yiyor
+    /// demektir (satır §5.10'daki düzeltmeden önce tam olarak buydu).
+    [Fact]
+    public async Task Import_WithKeep_PreservesHostedImages()
+    {
+        await ExecuteDbAsync(db => ImportAsync(db, SampleRows()));
+
+        await ExecuteDbAsync(async db =>
+        {
+            var product = await db.Products.SingleAsync(p => p.Sku == "0000000000001", Ct);
+            db.ProductImages.Add(new ProductImage
+            {
+                ProductId = product.Id,
+                SourceUrl = "https://res.cloudinary.com/test-cloud/image/upload/products/admin-yukledi",
+                CloudinaryPublicId = "products/admin-yukledi",
+                IsMigrated = true,
+                DisplayOrder = 99
+            });
+            await db.SaveChangesAsync(Ct);
+        });
+
+        // İkinci tur: katalog temizlenmeden (--keep), aynı SKU'lar upsert edilir.
+        await ExecuteDbAsync(db => new CatalogImporter(db).ImportAsync(
+            SampleRows(), new ImportOptions { PurgeCatalog = false, NowUtc = Now }, Ct));
+
+        await ExecuteDbAsync(async db =>
+        {
+            var product = await db.Products
+                .Include(p => p.Images)
+                .SingleAsync(p => p.Sku == "0000000000001", Ct);
+
+            var hosted = product.Images.SingleOrDefault(i => i.IsMigrated);
+            hosted.ShouldNotBeNull();
+            hosted.CloudinaryPublicId.ShouldBe("products/admin-yukledi");
+
+            // D&R görseli de HÂLÂ orada — sadece hosted olan korunmadı, kaynak
+            // görsel de yenilendi (mevcut iddiaların (137, 229) davranışıyla aynı).
+            product.Images.Count(i => !i.IsMigrated).ShouldBe(1);
+        });
+    }
 }

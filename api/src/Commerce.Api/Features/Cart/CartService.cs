@@ -1,4 +1,5 @@
 using Commerce.Api.Common.Exceptions;
+using Commerce.Api.Common.Images;
 using Commerce.Api.Features.BackgroundJobs;
 using Commerce.Api.Features.Cart.Dtos;
 using Commerce.Api.Persistence;
@@ -14,7 +15,8 @@ public sealed class CartService(
     AppDbContext db,
     IGuestCartStore guestCarts,
     IBackgroundJobClient backgroundJobs,
-    TimeProvider clock)
+    TimeProvider clock,
+    ProductImageUrls urls)
 {
     // ─────────────────────────────────────────────────────────
     // Okuma
@@ -384,7 +386,10 @@ public sealed class CartService(
                 p.Stock,
                 p.IsActive,
                 ImageUrl = p.Images.OrderBy(i => i.DisplayOrder)
-                                   .Select(i => i.SourceUrl).FirstOrDefault()
+                                   .Select(i => i.IsMigrated && i.CloudinaryPublicId != null
+                                       ? urls.ThumbnailPrefix + i.CloudinaryPublicId
+                                       : i.SourceUrl)
+                                   .FirstOrDefault()
             })
             .ToDictionaryAsync(p => p.Id, ct);
 

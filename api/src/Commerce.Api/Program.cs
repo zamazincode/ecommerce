@@ -1,7 +1,9 @@
 using System.Threading.RateLimiting;
 using Commerce.Api.Common.Email;
 using Commerce.Api.Common.Handlers;
+using Commerce.Api.Common.Images;
 using Commerce.Api.Common.OpenApi;
+using Commerce.Api.Features.Admin.Images;
 using Commerce.Api.Features.Auth;
 using Commerce.Api.Features.BackgroundJobs;
 using Commerce.Api.Features.Cart;
@@ -209,6 +211,35 @@ else
     builder.Services.AddScoped<IPaymentProvider, IyzicoPaymentProvider>();
 
 // ─────────────────────────────────────────────────────────────
+// Görseller (Faz 10) — D&R'nin 2339 görseli TAŞINMIYOR (telif); bu altyapı
+// yalnızca yeni ürünler için admin'in Cloudinary'ye yükleme yapmasını sağlar.
+// ─────────────────────────────────────────────────────────────
+builder.Services.AddOptions<CloudinarySettings>()
+    .Bind(builder.Configuration.GetSection(CloudinarySettings.SectionName));
+
+// Saf sınıf: ağ çağrısı yapmaz, anahtar gerektirmez, EF projeksiyonlarında
+// öneki SQL'e çevriliyor (ölçüldü). Her ortamda kayıtlı.
+builder.Services.AddSingleton<ProductImageUrls>();
+
+var useFakeImages = isTesting || string.IsNullOrWhiteSpace(builder.Configuration["Cloudinary:ApiKey"]);
+
+// K1 — Faz 5 (Jwt:Key) / Faz 8 (Iyzico:ApiKey) kararının aynısı: eksikse
+// SESSİZCE devam etme.
+if (useFakeImages && !isTesting && !builder.Environment.IsDevelopment())
+    throw new InvalidOperationException(
+        "Cloudinary:ApiKey tanımlı değil. Üretimde sahte görsel deposu kullanılamaz. " +
+        "dotnet user-secrets set \"Cloudinary:ApiKey\" \"...\" --project api/src/Commerce.Api");
+
+// SINGLETON ZORUNLU: her Cloudinary örneği KENDİ HttpClient'ını açıyor (ölçüldü).
+if (useFakeImages)
+    builder.Services.AddSingleton<IImageStorage, FakeImageStorage>();
+else
+    builder.Services.AddSingleton<IImageStorage, CloudinaryImageStorage>();
+
+builder.Services.AddScoped<AdminImageService>();
+builder.Services.AddScoped<ImageCleanupJobs>();
+
+// ─────────────────────────────────────────────────────────────
 // Mail (Faz 9)
 // ─────────────────────────────────────────────────────────────
 builder.Services.AddOptions<EmailSettings>()
@@ -372,6 +403,11 @@ if (useFakePayments && !isTesting)
         "ÖDEMELER SAHTE SAĞLAYICI İLE İŞLENİYOR. Gerçek tahsilat yapılmıyor. " +
         "Iyzico:ApiKey / Iyzico:SecretKey User Secrets'a girilirse iyzico devreye girer.");
 
+if (useFakeImages && !isTesting)
+    app.Logger.LogWarning(
+        "GÖRSEL DEPOSU SAHTE. Cloudinary'ye gerçek yükleme/silme yapılmıyor. " +
+        "Cloudinary:CloudName / ApiKey / ApiSecret User Secrets'a girilirse devreye girer.");
+
 // Sıra önemli: hata yakalayıcı EN ÜSTTE olmalı ki altındaki her şeyi sarsın.
 app.UseExceptionHandler();
 
@@ -464,6 +500,11 @@ app.MapAddressEndpoints();
 app.MapPaymentEndpoints();
 
 // ─────────────────────────────────────────────────────────────
+// Görsel/admin endpoint'leri (Faz 10) — Faz 11 bu grubu (/api/admin) devralacak
+// ─────────────────────────────────────────────────────────────
+app.MapAdminImageEndpoints();
+
+// ─────────────────────────────────────────────────────────────
 // Hangfire dashboard (Faz 9)
 // ─────────────────────────────────────────────────────────────
 // Testing'de MAP EDİLMEZ: MapHangfireDashboard JobStorage'ı map anında çözüyor
@@ -499,6 +540,12 @@ if (!isTesting)
         "cancel-expired-pending-orders",
         j => j.CancelExpiredPendingOrdersAsync(),
         "*/10 * * * *");
+
+    // Soft-delete edilmiş ürünlerin Cloudinary görselleri kotayı yemesin.
+    recurring.AddOrUpdate<ImageCleanupJobs>(
+        "cleanup-orphaned-images",
+        j => j.CleanupOrphanedImagesAsync(),
+        Cron.Weekly);
 }
 
 app.Run();

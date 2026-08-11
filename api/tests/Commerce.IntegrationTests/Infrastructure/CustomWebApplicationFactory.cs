@@ -1,4 +1,5 @@
 using Commerce.Api.Common.Email;
+using Commerce.Api.Common.Images;
 using Commerce.Api.Features.Payments;
 using Hangfire;
 using Microsoft.AspNetCore.Hosting;
@@ -19,6 +20,7 @@ public sealed class CustomWebApplicationFactory(string connectionString)
     public FakeEmailService EmailService { get; } = new();
     public FakePaymentProvider PaymentProvider { get; } = new();
     public RecordingBackgroundJobClient BackgroundJobs { get; } = new();
+    public FakeImageStorage ImageStorage { get; } = new();
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
@@ -40,6 +42,10 @@ public sealed class CustomWebApplicationFactory(string connectionString)
         builder.UseSetting("Jwt:Issuer", "commerce-api");
         builder.UseSetting("Jwt:Audience", "commerce-clients");
 
+        // ProductImageUrls cloud adını buradan alır; testler URL'i BİLDİKLERİ bir
+        // değere göre iddia edebilsin (yoksa FallbackCloudName'e düşer).
+        builder.UseSetting("Cloudinary:CloudName", "test-cloud");
+
         builder.ConfigureTestServices(services =>
         {
             // DIŞ DÜNYA SINIRI: gerçek mail gitmesin, ama "gitti mi" diye sorabilelim.
@@ -55,7 +61,11 @@ public sealed class CustomWebApplicationFactory(string connectionString)
             services.RemoveAll<IBackgroundJobClient>();
             services.AddSingleton<IBackgroundJobClient>(BackgroundJobs);
 
-            // Faz 10'da: IImageStorage
+            // DIŞ DÜNYA SINIRI: gerçek Cloudinary silme çağrısı gitmesin, ama "ne
+            // silindi" diye sorabilelim. Program.cs Testing'de zaten FakeImageStorage
+            // kaydediyor; burada testin elindeki ÖRNEKLE değiştiriyoruz.
+            services.RemoveAll<IImageStorage>();
+            services.AddSingleton<IImageStorage>(ImageStorage);
         });
     }
 }

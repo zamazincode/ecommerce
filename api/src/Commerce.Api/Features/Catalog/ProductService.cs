@@ -2,6 +2,7 @@ using System.Linq.Expressions;
 using Commerce.Api.Common.Caching;
 using Commerce.Api.Common.Exceptions;
 using Commerce.Api.Common.Extensions;
+using Commerce.Api.Common.Images;
 using Commerce.Api.Common.Results;
 using Commerce.Api.Features.Catalog.Dtos;
 using Commerce.Api.Persistence;
@@ -14,14 +15,20 @@ namespace Commerce.Api.Features.Catalog;
 public sealed class ProductService(
     AppDbContext db,
     HybridCache cache,
-    CategoryService categories)
+    CategoryService categories,
+    ProductImageUrls urls)
 {
     /// Projeksiyon ifadesi. EF bunu SQL'e çevirir; SADECE bu kolonlar SELECT edilir.
     ///
     /// DİKKAT: Burada p.EffectivePrice YAZAMAZSIN. O, veritabanında olmayan bir
     /// C# property'si — EF çeviremez, "could not be translated" hatası verir.
-    /// Aynı hesabı ifade içinde açıkça yazıyoruz.
-    private static readonly Expression<Func<Product, ProductListDto>> ToListDto =
+    /// Aynı hesabı ifade içinde açıkça yazıyoruz. Aynı ailenin ikinci uyarısı:
+    /// urls.Build(...)/urls.Resolve(...) da bu ifadenin içinde ÇAĞRILAMAZ —
+    /// yalnızca hazır önekler (urls.CardPrefix vb.) düz `+` ile birleştirilir.
+    ///
+    /// Statik alan DEĞİL, statik METOT: ProductImageUrls DI'dan gelen bir
+    /// örnek — static readonly bir Expression onu yakalayamaz (plan K4).
+    private static Expression<Func<Product, ProductListDto>> ToListDto(ProductImageUrls urls) =>
         p => new ProductListDto(
             p.Id,
             p.Slug,
@@ -31,7 +38,11 @@ public sealed class ProductService(
             p.DiscountedPrice,
             p.DiscountedPrice ?? p.Price,
             p.Stock > 0,
-            p.Images.OrderBy(i => i.DisplayOrder).Select(i => i.SourceUrl).FirstOrDefault(),
+            p.Images.OrderBy(i => i.DisplayOrder)
+                .Select(i => i.IsMigrated && i.CloudinaryPublicId != null
+                    ? urls.CardPrefix + i.CloudinaryPublicId
+                    : i.SourceUrl)
+                .FirstOrDefault(),
             p.CategoryId);
 
     public async Task<PagedResult<ProductListDto>> SearchAsync(
@@ -62,7 +73,7 @@ public sealed class ProductService(
 
         query = ProductSorting.ApplySort(query, filter.SortBy, filter.SortDir);
 
-        return await query.Select(ToListDto).ToPagedResultAsync(page, ct);
+        return await query.Select(ToListDto(urls)).ToPagedResultAsync(page, ct);
     }
 
     public async Task<ProductDetailDto> GetBySlugAsync(string slug, CancellationToken ct = default)
@@ -124,7 +135,11 @@ public sealed class ProductService(
                         p.BookDetail.Language,
                         p.BookDetail.PublishedYear,
                         p.BookDetail.Binding),
-                p.Images.OrderBy(i => i.DisplayOrder).Select(i => i.SourceUrl).ToList()))
+                p.Images.OrderBy(i => i.DisplayOrder)
+                    .Select(i => i.IsMigrated && i.CloudinaryPublicId != null
+                        ? urls.DetailPrefix + i.CloudinaryPublicId
+                        : i.SourceUrl)
+                    .ToList()))
             .FirstOrDefaultAsync(ct);
 
     public async Task<IReadOnlyList<ProductListDto>> GetRelatedAsync(
@@ -144,7 +159,7 @@ public sealed class ProductService(
             .Where(p => p.IsActive && p.CategoryId == categoryId && p.Id != productId)
             .OrderByDescending(p => p.CreatedAt).ThenBy(p => p.Id)
             .Take(8)
-            .Select(ToListDto)
+            .Select(ToListDto(urls))
             .ToListAsync(ct);
     }
 
@@ -159,5 +174,9 @@ public sealed class ProductService(
         => db.Products.AsNoTracking().Where(p => p.IsActive);
 
     /// Projeksiyon ifadesini paylaşıyoruz ki liste kolonları tek yerde kalsın.
-    internal static Expression<Func<Product, ProductListDto>> ListProjection => ToListDto;
+    /// Statik metot: çağıran taraf kendi ProductImageUrls örneğini geçirir
+    /// (CatalogService, PostgresSearchService — DI değişikliği gerektirmez,
+    /// ProductImageUrls zaten singleton).
+    internal static Expression<Func<Product, ProductListDto>> ListProjection(ProductImageUrls urls)
+        => ToListDto(urls);
 }

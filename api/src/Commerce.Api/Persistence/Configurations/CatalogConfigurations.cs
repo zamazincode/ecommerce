@@ -187,7 +187,10 @@ public class ProductImageConfiguration : IEntityTypeConfiguration<ProductImage>
         b.Property(x => x.CloudinaryPublicId).HasMaxLength(300);
 
         b.HasIndex(x => new { x.ProductId, x.DisplayOrder });
-        b.HasIndex(x => x.IsMigrated);   // Faz 10: geçmemişleri hızlı bulmak için
+        // Tek kullanıcısı haftalık ImageCleanupJobs; toplu geçiş İPTAL edildiği
+        // için artık çoğunlukla işlevsiz (2339 satırda Postgres seq scan seçer).
+        // Düşürmek migration ister, değmiyor — bkz. CLAUDE.md "Temizlik borcu".
+        b.HasIndex(x => x.IsMigrated);
 
         b.HasOne(x => x.Product)
          .WithMany(x => x.Images)

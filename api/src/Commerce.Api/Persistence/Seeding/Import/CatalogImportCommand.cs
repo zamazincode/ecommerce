@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace Commerce.Api.Persistence.Seeding.Import;
 
@@ -38,7 +39,8 @@ public static class CatalogImportCommand
             return;
         }
 
-        var importer = new CatalogImporter(db);
+        var logger = services.GetRequiredService<ILogger<CatalogImporter>>();
+        var importer = new CatalogImporter(db, logger);
         var report = await importer.ImportAsync(
             rows,
             new ImportOptions { PurgeCatalog = purge, NowUtc = DateTime.UtcNow },

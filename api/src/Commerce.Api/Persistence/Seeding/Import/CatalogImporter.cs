@@ -2,6 +2,8 @@
 using Commerce.Domain.Catalog;
 using Commerce.Domain.Common;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Commerce.Api.Persistence.Seeding.Import;
 
@@ -24,8 +26,13 @@ public sealed record ImportOptions
 /// Aynı kaynakla iki kez çalıştırmak güvenlidir: eşleştirme
 /// <see cref="Product.Sku"/> üzerinden yapılır, eşleşen ürünün slug'ı
 /// KORUNUR (yayınlanmış URL'ler kırılmasın).
-public sealed class CatalogImporter(AppDbContext db)
+public sealed class CatalogImporter(AppDbContext db, ILogger<CatalogImporter>? logger = null)
 {
+    // İsteğe bağlı: CatalogImportCommand ve testler DI kullanmadan `new CatalogImporter(db)`
+    // çağırıyor. Logger verilmezse sessiz bir yedeğe düşer.
+    private readonly ILogger<CatalogImporter> _logger = logger ?? NullLogger<CatalogImporter>.Instance;
+
+
     /// Kategori adlarında geçemeyecek bir ayraç (ASCII unit separator).
     private const char PathSeparator = '\u001F';
 
@@ -96,6 +103,18 @@ public sealed class CatalogImporter(AppDbContext db)
     /// Kuponlar ve kullanıcılar da korunur.
     private async Task PurgeCatalogAsync(CancellationToken ct)
     {
+        // Admin'in Cloudinary'ye yüklediği görseller de bu silmeyle gidiyor
+        // (bilinçli — "temizle ve yeniden yükle" davranışı). Ama Cloudinary'deki
+        // dosyalar YETİM KALIR ve satır gittiği için haftalık ImageCleanupJobs
+        // onları bir daha asla bulamaz (plan 2.6) — en azından görünür kılıyoruz.
+        var hosted = await db.ProductImages.IgnoreQueryFilters()
+            .Where(i => i.IsMigrated && i.CloudinaryPublicId != null)
+            .CountAsync(ct);
+        if (hosted > 0)
+            _logger.LogWarning(
+                "{Count} adet Cloudinary görseli veritabanından siliniyor. Cloudinary'deki " +
+                "dosyalar YETİM KALACAK ve haftalık temizlik job'ı onları bulamayacak.", hosted);
+
         // IgnoreQueryFilters olmadan soft-delete edilmiş ürünler geride kalır
         // ve ardından gelen Products silmesi FK'dan patlar.
         await db.Reviews.IgnoreQueryFilters().ExecuteDeleteAsync(ct);
@@ -434,9 +453,18 @@ public sealed class CatalogImporter(AppDbContext db)
 
     private static void ApplyImages(Product product, ProductImportRow row, ImportReport report)
     {
-        product.Images.Clear();
+        // Cloudinary'de barınan (admin'in yüklediği) görseller KORUNUR: kaynak
+        // xlsx'te karşılıkları yok, düz Clear() onları sessizce siler ve
+        // Cloudinary'de yetim bırakır — üstelik satır gittiği için haftalık
+        // temizlik job'ı (ImageCleanupJobs) bir daha asla bulamaz (plan 2.6).
+        foreach (var sourced in product.Images.Where(i => !i.IsMigrated).ToList())
+            product.Images.Remove(sourced);
 
-        var order = 0;
+        // Kalan (varsa) hosted görsellerin sırasından devam et — yeni D&R
+        // satırları onların ÖNÜNE geçmesin.
+        var order = product.Images.Count == 0 ? 0 : product.Images.Max(i => i.DisplayOrder) + 1;
+        var written = 0;
+
         foreach (var url in row.ImageUrls)
         {
             if (url.Length > 1000) continue;
@@ -445,12 +473,14 @@ public sealed class CatalogImporter(AppDbContext db)
             {
                 SourceUrl = url,
                 DisplayOrder = order++,
-                // Faz 10'da Cloudinary'ye taşınacak; şimdilik kaynak URL kullanılıyor.
+                // D&R görselleri KALICI OLARAK taşınmıyor (telif — Faz 10 kapsam
+                // kararı). IsMigrated bu kaynaktan gelen satırlarda hep false.
                 IsMigrated = false
             });
+            written++;
         }
 
-        report.ImagesWritten += order;
+        report.ImagesWritten += written;
     }
 
     private static void ApplyBookDetail(Product product, ProductImportRow row, ImportReport report)

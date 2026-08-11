@@ -21,6 +21,7 @@ public sealed class ProductBuilder
     private Author? _author;
     private string? _publisherName;
     private DateTime _createdAt = new(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+    private string? _cloudinaryPublicId;
 
     public ProductBuilder WithName(string name) { _name = name; return this; }
     public ProductBuilder WithDescription(string description) { _description = description; return this; }
@@ -32,6 +33,10 @@ public sealed class ProductBuilder
     public ProductBuilder ByAuthor(Author a) { _author = a; return this; }
     public ProductBuilder WithPublisherName(string name) { _publisherName = name; return this; }
     public ProductBuilder CreatedAt(DateTime utc) { _createdAt = utc; return this; }
+
+    /// Varsayılan D&R görselinin yerine Cloudinary'de barınan bir görsel koyar.
+    public ProductBuilder WithCloudinaryImage(string publicId = "products/testkapak")
+    { _cloudinaryPublicId = publicId; return this; }
 
     public Product Build()
     {
@@ -51,7 +56,15 @@ public sealed class ProductBuilder
             Category = _category ?? CatalogTestData.DefaultCategory(),
             AuthorNames = _author?.Name,
             PublisherName = _publisherName,
-            Images = [new ProductImage { SourceUrl = "https://example.test/kapak.jpg", DisplayOrder = 0 }]
+            Images = [_cloudinaryPublicId is null
+                ? new ProductImage { SourceUrl = "https://example.test/kapak.jpg", DisplayOrder = 0 }
+                : new ProductImage
+                {
+                    SourceUrl = $"https://res.cloudinary.com/test-cloud/image/upload/{_cloudinaryPublicId}",
+                    CloudinaryPublicId = _cloudinaryPublicId,
+                    IsMigrated = true,
+                    DisplayOrder = 0
+                }]
         };
 
         if (_author is not null)
