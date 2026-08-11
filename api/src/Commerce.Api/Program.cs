@@ -16,6 +16,7 @@ using Commerce.Api.Features.Auth;
 using Commerce.Api.Features.BackgroundJobs;
 using Commerce.Api.Features.Cart;
 using Commerce.Api.Features.Catalog;
+using Commerce.Api.Features.Favorites;
 using Commerce.Api.Features.Orders;
 using Commerce.Api.Features.Payments;
 using Commerce.Api.Features.Search;
@@ -193,6 +194,7 @@ builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<ProductService>();
 builder.Services.AddScoped<CategoryService>();
 builder.Services.AddScoped<CatalogService>();
+builder.Services.AddScoped<FavoriteService>();
 
 // ─────────────────────────────────────────────────────────────
 // Arama servisi (Faz 4)
@@ -534,6 +536,11 @@ app.MapAddressEndpoints();
 // Ödeme endpoint'leri (Faz 8)
 // ─────────────────────────────────────────────────────────────
 app.MapPaymentEndpoints();
+
+// ─────────────────────────────────────────────────────────────
+// Favoriler
+// ─────────────────────────────────────────────────────────────
+app.MapFavoriteEndpoints();
 
 // ─────────────────────────────────────────────────────────────
 // Admin API (Faz 11) — Faz 10'un görsel uçlarını da devralıyor

@@ -13,6 +13,10 @@ public static class AdminImageEndpoints
              .WithSummary("Cloudinary'ye doğrudan yükleme için imzalı parametreler")
              .Produces<SignedUploadDto>();
 
+        group.MapGet("/products/{productId:int}/images", ListImages)
+             .WithSummary("Ürünün görsellerini listeler")
+             .Produces<IReadOnlyList<ProductImageDto>>();
+
         group.MapPost("/products/{productId:int}/images", AddImage)
              .WithValidation<AddProductImageRequest>()
              .WithSummary("Yüklenmiş bir Cloudinary görselini ürüne bağlar")
@@ -30,6 +34,10 @@ public static class AdminImageEndpoints
 
     private static SignedUploadDto GetSignature(AdminImageService service)
         => service.GetSignature();
+
+    private static async Task<IReadOnlyList<ProductImageDto>> ListImages(
+        int productId, AdminImageService service, CancellationToken ct)
+        => await service.ListAsync(productId, ct);
 
     private static async Task<IResult> AddImage(
         int productId, AddProductImageRequest body, AdminImageService service, CancellationToken ct)

@@ -85,6 +85,60 @@ public class AdminImageEndpointTests(DatabaseFixture fixture) : IntegrationTestB
     }
 
     // ═══════════════════════════════════════════════════════════
+    // Görsel listeleme
+    // ═══════════════════════════════════════════════════════════
+
+    [Fact]
+    public async Task ListImages_ReturnsImagesInDisplayOrder()
+    {
+        await AuthenticateAsAdminAsync();
+        var product = await SeedProductAsync();   // varsayılan görsel DisplayOrder = 0
+
+        await Client.PostAsJsonAsync(
+            $"/api/admin/products/{product.Id}/images",
+            new { publicId = "products/ikinci-kapak" }, Ct);   // DisplayOrder = 1
+
+        var images = await Client.GetFromJsonAsync<List<ProductImageDto>>(
+            $"/api/admin/products/{product.Id}/images", Ct);
+
+        images!.Count.ShouldBe(2);
+        images.Select(i => i.DisplayOrder).ShouldBe([0, 1]);
+        images[1].Url.ShouldStartWith("https://res.cloudinary.com/test-cloud");
+    }
+
+    [Fact]
+    public async Task ListImages_ForUnknownProduct_ReturnsEmptyList()
+    {
+        await AuthenticateAsAdminAsync();
+
+        var images = await Client.GetFromJsonAsync<List<ProductImageDto>>(
+            "/api/admin/products/999999/images", Ct);
+
+        images!.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task ListImages_WithoutToken_Returns401()
+    {
+        var product = await SeedProductAsync();
+
+        var response = await Client.GetAsync($"/api/admin/products/{product.Id}/images", Ct);
+
+        response.StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
+    public async Task ListImages_WithCustomerToken_Returns403()
+    {
+        var product = await SeedProductAsync();
+        await AuthenticateAsync();
+
+        var response = await Client.GetAsync($"/api/admin/products/{product.Id}/images", Ct);
+
+        response.StatusCode.ShouldBe(HttpStatusCode.Forbidden);
+    }
+
+    // ═══════════════════════════════════════════════════════════
     // Görsel bağlama
     // ═══════════════════════════════════════════════════════════
 

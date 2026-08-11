@@ -69,6 +69,13 @@ public static class CatalogEndpoints
            .WithSummary("Yayınevi listesi")
            .Produces<IReadOnlyList<PublisherBriefDto>>();
 
+        app.MapGet("/api/brands", async (
+                CatalogService service, CancellationToken ct)
+                => await service.GetBrandsAsync(ct))
+           .WithTags("Catalog")
+           .WithSummary("Marka listesi")
+           .Produces<IReadOnlyList<BrandBriefDto>>();
+
         app.MapGet("/api/home", async (
                 CatalogService service, CancellationToken ct)
                 => await service.GetHomeAsync(ct))

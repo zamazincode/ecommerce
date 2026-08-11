@@ -39,6 +39,7 @@ public class AdminAuthorizationTests(DatabaseFixture fixture) : IntegrationTestB
         ("PATCH", "/api/admin/reviews/1/approve"),
         ("DELETE", "/api/admin/reviews/1"),
         ("POST", "/api/admin/images/signature"),
+        ("GET", "/api/admin/products/1/images"),
         ("POST", "/api/admin/products/1/images"),
         ("DELETE", "/api/admin/product-images/1")
     ];

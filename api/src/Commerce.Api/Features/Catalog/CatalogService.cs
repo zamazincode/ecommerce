@@ -28,6 +28,14 @@ public sealed class CatalogService(
             .Select(p => new PublisherBriefDto(p.Id, p.Name, p.Slug))
             .ToListAsync(ct);
 
+    public async Task<IReadOnlyList<BrandBriefDto>> GetBrandsAsync(
+        CancellationToken ct = default)
+        => await db.Brands
+            .AsNoTracking()
+            .OrderBy(b => b.Name)
+            .Select(b => new BrandBriefDto(b.Id, b.Name, b.Slug))
+            .ToListAsync(ct);
+
     public async Task<HomeDto> GetHomeAsync(CancellationToken ct = default)
         => await cache.GetOrCreateAsync(
             CacheKeys.Home,

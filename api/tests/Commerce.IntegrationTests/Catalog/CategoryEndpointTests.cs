@@ -127,6 +127,22 @@ public class CategoryEndpointTests(DatabaseFixture fixture) : IntegrationTestBas
     }
 
     [Fact]
+    public async Task GetBrands_ReturnsSortedList()
+    {
+        await ExecuteDbAsync(async db =>
+        {
+            db.Brands.AddRange(
+                new Brand { Name = "Victorinox", Slug = "victorinox" },
+                new Brand { Name = "Anatolian", Slug = "anatolian" });
+            await db.SaveChangesAsync();
+        });
+
+        var brands = await Client.GetFromJsonAsync<List<BrandBriefDto>>("/api/brands", Ct);
+
+        brands!.Select(b => b.Name).ShouldBe(["Anatolian", "Victorinox"]);
+    }
+
+    [Fact]
     public async Task GetAuthorBySlug_WhenNotFound_Returns404()
     {
         var response = await Client.GetAsync("/api/authors/olmayan-yazar", Ct);

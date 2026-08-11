@@ -19,6 +19,23 @@ public sealed class AdminImageService(
         return new SignedUploadDto(signed.Url, signed.ApiKey, signed.Timestamp, signed.Signature, signed.Folder);
     }
 
+    public async Task<IReadOnlyList<ProductImageDto>> ListAsync(
+        int productId, CancellationToken ct = default)
+        => await db.ProductImages.AsNoTracking()
+            .Where(i => i.ProductId == productId)
+            .OrderBy(i => i.DisplayOrder)
+            // DİKKAT: urls.Resolve(...)/urls.Build(...) burada ÇAĞRILAMAZ — EF
+            // bir metot çağrısını SQL'e çeviremez (EffectivePrice tuzağının
+            // aynı ailesi, ProductService.ToListDto'daki desenin aynısı).
+            // Yalnızca hazır önek (DetailPrefix) düz `+` ile birleştirilir.
+            .Select(i => new ProductImageDto(
+                i.Id, i.ProductId,
+                i.IsMigrated && i.CloudinaryPublicId != null
+                    ? urls.DetailPrefix + i.CloudinaryPublicId
+                    : i.SourceUrl,
+                i.DisplayOrder, i.IsMigrated))
+            .ToListAsync(ct);
+
     public async Task<ProductImageDto> AddAsync(
         int productId, AddProductImageRequest body, CancellationToken ct = default)
     {
