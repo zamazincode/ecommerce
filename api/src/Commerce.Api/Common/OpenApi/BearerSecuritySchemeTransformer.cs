@@ -27,12 +27,13 @@ internal sealed class BearerSecuritySchemeTransformer(
             Description = "Login cevabındaki accessToken değerini yapıştırın."
         };
 
-        document.Security =
-        [
-            new OpenApiSecurityRequirement
-            {
-                [new OpenApiSecuritySchemeReference("Bearer", document)] = new List<string>()
-            }
-        ];
+        // Belge (document) seviyesinde "Security" YAZILMIYOR — bilerek.
+        // OpenAPI'de belge seviyesindeki security her operasyona VARSAYILAN
+        // olarak miras geçer, operasyon kendi security'sini tanımlamadıkça.
+        // Bu yüzden anonim endpoint'ler (login, register, logout, ürün
+        // listesi...) de Scalar'da "Authorization: Bearer" istiyormuş gibi
+        // görünürdü. Doğru gereksinim EndpointAuthorizationOperationTransformer
+        // ile operasyon başına, gerçek [Authorize]/RequireAuthorization
+        // durumuna bakılarak yazılıyor.
     }
 }

@@ -1,3 +1,5 @@
+using Commerce.Api.Features.Admin.Reports;
+
 namespace Commerce.Api.Common.Caching;
 
 /// Anahtar kalıbını TEK YERDE tut. Elle string yazarsan er ya da geç
@@ -7,9 +9,13 @@ public static class CacheKeys
 {
     public const string CategoriesFlat = "categories:flat";
     public const string Home = "home:blocks";
+    public const string AdminDashboard = "admin:dashboard";
 
     public static string Product(string slug) => $"product:{slug}";
     public static string Suggest(string term) => $"suggest:{term}";
+
+    public static string AdminSales(DateOnly from, DateOnly to, ReportGroupBy groupBy)
+        => $"admin:sales:{from:yyyy-MM-dd}:{to:yyyy-MM-dd}:{groupBy}";
 }
 
 /// HybridCache etiketleri. Faz 11'de admin bir ürünü güncellediğinde
@@ -18,6 +24,7 @@ public static class CacheTags
 {
     public const string Products = "products";
     public const string Categories = "categories";
+    public const string Orders = "orders";
 }
 
 public static class CacheDurations

@@ -1,19 +1,14 @@
 using Commerce.Api.Common.Filters;
 using Commerce.Api.Features.Admin.Images.Dtos;
-using Commerce.Api.Features.Auth;
 
 namespace Commerce.Api.Features.Admin.Images;
 
 public static class AdminImageEndpoints
 {
-    /// Faz 11 bu grubu (`/api/admin`) devralacak — imza ucu şimdiden burada
-    /// duruyor, o fazda sadece dosyası taşınacak.
-    public static IEndpointRouteBuilder MapAdminImageEndpoints(this IEndpointRouteBuilder app)
+    /// Grup artık AdminEndpoints.MapAdminEndpoints'te kuruluyor (Faz 11/K1) —
+    /// tek yetkilendirme noktası orada. Bu metot yalnızca kendi route'larını ekler.
+    public static RouteGroupBuilder MapAdminImageEndpoints(this RouteGroupBuilder group)
     {
-        var group = app.MapGroup("/api/admin")
-                       .WithTags("Admin")
-                       .RequireAuthorization(AuthPolicies.AdminOnly);
-
         group.MapPost("/images/signature", GetSignature)
              .WithSummary("Cloudinary'ye doğrudan yükleme için imzalı parametreler")
              .Produces<SignedUploadDto>();
@@ -30,7 +25,7 @@ public static class AdminImageEndpoints
              .Produces(StatusCodes.Status204NoContent)
              .ProducesProblem(StatusCodes.Status404NotFound);
 
-        return app;
+        return group;
     }
 
     private static SignedUploadDto GetSignature(AdminImageService service)

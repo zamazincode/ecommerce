@@ -1,3 +1,4 @@
+using Commerce.Api.Persistence.Auditing;
 using Commerce.Api.Persistence.Identity;
 using Commerce.Domain.Catalog;
 using Commerce.Domain.Orders;
@@ -33,6 +34,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
     public DbSet<Review> Reviews => Set<Review>();
     public DbSet<Favorite> Favorites => Set<Favorite>();
     public DbSet<SearchLog> SearchLogs => Set<SearchLog>();
+
+    public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

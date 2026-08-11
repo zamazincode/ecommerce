@@ -3,7 +3,15 @@ using Commerce.Api.Common.Email;
 using Commerce.Api.Common.Handlers;
 using Commerce.Api.Common.Images;
 using Commerce.Api.Common.OpenApi;
+using Commerce.Api.Features.Admin;
+using Commerce.Api.Features.Admin.Audit;
+using Commerce.Api.Features.Admin.Categories;
+using Commerce.Api.Features.Admin.Coupons;
 using Commerce.Api.Features.Admin.Images;
+using Commerce.Api.Features.Admin.Orders;
+using Commerce.Api.Features.Admin.Products;
+using Commerce.Api.Features.Admin.Reports;
+using Commerce.Api.Features.Admin.Reviews;
 using Commerce.Api.Features.Auth;
 using Commerce.Api.Features.BackgroundJobs;
 using Commerce.Api.Features.Cart;
@@ -12,6 +20,7 @@ using Commerce.Api.Features.Orders;
 using Commerce.Api.Features.Payments;
 using Commerce.Api.Features.Search;
 using Commerce.Api.Persistence;
+using Commerce.Api.Persistence.Auditing;
 using Commerce.Api.Persistence.Identity;
 using Commerce.Api.Persistence.Seeding;
 using Commerce.Api.Persistence.Seeding.Import;
@@ -57,7 +66,19 @@ builder.Services.AddSerilog((services, lc) =>
 var postgresConnection = builder.Configuration.GetConnectionString("Postgres")
     ?? throw new InvalidOperationException("ConnectionStrings:Postgres tanımlı değil.");
 
-builder.Services.AddDbContext<AppDbContext>(o => o.UseNpgsql(postgresConnection));
+// Admin denetim kaydı (Faz 11): interceptor "kim" diye HttpContext.User'a
+// bakacak — bu paket koşulsuz kaydedilmezse IHttpContextAccessor çözülemez
+// (kod tabanında AddIdentityCore/Hangfire/Serilog hiçbiri kaydetmiyor, ölçüldü).
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<AuditSaveChangesInterceptor>();
+
+builder.Services.AddDbContext<AppDbContext>((sp, o) =>
+{
+    o.UseNpgsql(postgresConnection);
+    // SCOPED interceptor: fix-up listesi DbContext'e özgü durum tutuyor (K2) —
+    // singleton olsaydı eşzamanlı isteklerin denetim satırları karışırdı.
+    o.AddInterceptors(sp.GetRequiredService<AuditSaveChangesInterceptor>());
+});
 
 // AddDefaultTokenProviders() IDataProtectionProvider'a ihtiyaç duyar.
 builder.Services.AddDataProtection();
@@ -108,7 +129,11 @@ builder.Services.AddProblemDetails();
 
 builder.Services.AddValidatorsFromAssemblyContaining<Program>(includeInternalTypes: true);
 
-builder.Services.AddOpenApi(o => o.AddDocumentTransformer<BearerSecuritySchemeTransformer>());
+builder.Services.AddOpenApi(o =>
+{
+    o.AddDocumentTransformer<BearerSecuritySchemeTransformer>();
+    o.AddOperationTransformer<EndpointAuthorizationOperationTransformer>();
+});
 
 // ─────────────────────────────────────────────────────────────
 // Kimlik doğrulama (Faz 5)
@@ -238,6 +263,17 @@ else
 
 builder.Services.AddScoped<AdminImageService>();
 builder.Services.AddScoped<ImageCleanupJobs>();
+
+// ─────────────────────────────────────────────────────────────
+// Admin API (Faz 11)
+// ─────────────────────────────────────────────────────────────
+builder.Services.AddScoped<AdminProductService>();
+builder.Services.AddScoped<AdminCategoryService>();
+builder.Services.AddScoped<AdminOrderService>();
+builder.Services.AddScoped<AdminCouponService>();
+builder.Services.AddScoped<AdminReportService>();
+builder.Services.AddScoped<AdminAuditService>();
+builder.Services.AddScoped<AdminReviewService>();
 
 // ─────────────────────────────────────────────────────────────
 // Mail (Faz 9)
@@ -500,9 +536,9 @@ app.MapAddressEndpoints();
 app.MapPaymentEndpoints();
 
 // ─────────────────────────────────────────────────────────────
-// Görsel/admin endpoint'leri (Faz 10) — Faz 11 bu grubu (/api/admin) devralacak
+// Admin API (Faz 11) — Faz 10'un görsel uçlarını da devralıyor
 // ─────────────────────────────────────────────────────────────
-app.MapAdminImageEndpoints();
+app.MapAdminEndpoints();
 
 // ─────────────────────────────────────────────────────────────
 // Hangfire dashboard (Faz 9)
