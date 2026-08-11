@@ -27,14 +27,18 @@ public class CleanupJobsTests(DatabaseFixture fixture) : IntegrationTestBase(fix
             // 40 gün önce süresi dolmuş — 30 günlük tampon aşıldı, silinmeli.
             db.RefreshTokens.Add(new RefreshToken
             {
-                UserId = userId, Token = "eski-token-hash",
-                ExpiresAt = now.AddDays(-40), CreatedAt = now.AddDays(-70)
+                UserId = userId,
+                Token = "eski-token-hash",
+                ExpiresAt = now.AddDays(-40),
+                CreatedAt = now.AddDays(-70)
             });
             // Hâlâ geçerli — kalmalı.
             db.RefreshTokens.Add(new RefreshToken
             {
-                UserId = userId, Token = "guncel-token-hash",
-                ExpiresAt = now.AddDays(20), CreatedAt = now.AddDays(-10)
+                UserId = userId,
+                Token = "guncel-token-hash",
+                ExpiresAt = now.AddDays(20),
+                CreatedAt = now.AddDays(-10)
             });
             await db.SaveChangesAsync();
         });
@@ -59,8 +63,11 @@ public class CleanupJobsTests(DatabaseFixture fixture) : IntegrationTestBase(fix
             // için elde tutulan kısa geçmiş kaybolur.
             db.RefreshTokens.Add(new RefreshToken
             {
-                UserId = userId, Token = "iptal-edilmis-token-hash",
-                ExpiresAt = now.AddDays(25), CreatedAt = now.AddDays(-5), RevokedAt = now.AddDays(-5)
+                UserId = userId,
+                Token = "iptal-edilmis-token-hash",
+                ExpiresAt = now.AddDays(25),
+                CreatedAt = now.AddDays(-5),
+                RevokedAt = now.AddDays(-5)
             });
             await db.SaveChangesAsync();
         });

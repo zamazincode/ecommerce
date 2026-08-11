@@ -17,13 +17,13 @@ public static class OrderStatusTransition
     /// Boş dizi = terminal durum, çıkışı yok.
     private static readonly Dictionary<OrderStatus, OrderStatus[]> Allowed = new()
     {
-        [OrderStatus.Pending]   = [OrderStatus.Paid, OrderStatus.Cancelled],
-        [OrderStatus.Paid]      = [OrderStatus.Preparing, OrderStatus.Cancelled, OrderStatus.Refunded],
+        [OrderStatus.Pending] = [OrderStatus.Paid, OrderStatus.Cancelled],
+        [OrderStatus.Paid] = [OrderStatus.Preparing, OrderStatus.Cancelled, OrderStatus.Refunded],
         [OrderStatus.Preparing] = [OrderStatus.Shipped, OrderStatus.Cancelled],
-        [OrderStatus.Shipped]   = [OrderStatus.Delivered],
+        [OrderStatus.Shipped] = [OrderStatus.Delivered],
         [OrderStatus.Delivered] = [],
         [OrderStatus.Cancelled] = [],
-        [OrderStatus.Refunded]  = []
+        [OrderStatus.Refunded] = []
     };
 
     public static bool CanTransition(OrderStatus from, OrderStatus to)

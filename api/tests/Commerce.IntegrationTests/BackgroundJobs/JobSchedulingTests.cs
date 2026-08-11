@@ -42,8 +42,12 @@ public class JobSchedulingTests(DatabaseFixture fixture) : IntegrationTestBase(f
     {
         var response = await Client.PostAsJsonAsync("/api/addresses", new
         {
-            title = "Ev", fullName = "Ali Veli", phone = "5551112233",
-            city = "İstanbul", district = "Kadıköy", fullAddress = "Moda Caddesi No 1 Daire 5",
+            title = "Ev",
+            fullName = "Ali Veli",
+            phone = "5551112233",
+            city = "İstanbul",
+            district = "Kadıköy",
+            fullAddress = "Moda Caddesi No 1 Daire 5",
             isDefault = true
         }, Ct);
         response.StatusCode.ShouldBe(HttpStatusCode.Created);

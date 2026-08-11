@@ -310,7 +310,9 @@ if (!isTesting)
             ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown",
             _ => new FixedWindowRateLimiterOptions
             {
-                PermitLimit = 20, Window = TimeSpan.FromMinutes(1), QueueLimit = 0
+                PermitLimit = 20,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0
             }));
 
         // Ödeme: IP başına dakikada 30. Başlatma iyzico'ya giden dış çağrı üretir.
@@ -318,7 +320,9 @@ if (!isTesting)
             ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown",
             _ => new FixedWindowRateLimiterOptions
             {
-                PermitLimit = 30, Window = TimeSpan.FromMinutes(1), QueueLimit = 0
+                PermitLimit = 30,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0
             }));
     });
 }

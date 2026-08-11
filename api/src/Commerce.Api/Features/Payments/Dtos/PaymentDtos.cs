@@ -10,7 +10,7 @@ public sealed record PaymentInitializedDto(
 public sealed record PaymentStatusDto(
     string OrderNumber, OrderStatus OrderStatus, PaymentStatus? PaymentStatus,
     decimal Amount, DateTime? UpdatedAt);          // "CompletedAt" yanıltıcı olurdu:
-                                                    // başarısız denemede de doluyor
+                                                   // başarısız denemede de doluyor
 
 /// Callback/webhook'un sonucu — endpoint bunu yönlendirme parametresine çevirir.
 public enum PaymentCompletionOutcome { Succeeded, Failed, AmountMismatch, UnknownReference }

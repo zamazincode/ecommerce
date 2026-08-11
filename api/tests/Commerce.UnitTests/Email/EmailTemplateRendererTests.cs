@@ -25,11 +25,20 @@ public class EmailTemplateRendererTests
         // sadece Template.Parse'ın hata vermemesi.
         var model = new
         {
-            Baslik = "test", Govde = "test",
-            Ad = "Test", DogrulamaUrl = "http://x", SifirlamaUrl = "http://x",
-            SiparisNo = "ORD-1", Kalemler = new[] { new { Ad = "Kitap", Adet = 1, Tutar = "10,00 ₺" } },
-            AraToplam = "10,00 ₺", Indirim = "0,00 ₺", Kargo = "0,00 ₺", Toplam = "10,00 ₺",
-            SiparisUrl = "http://x", Urunler = new[] { "Kitap" }, SepetUrl = "http://x"
+            Baslik = "test",
+            Govde = "test",
+            Ad = "Test",
+            DogrulamaUrl = "http://x",
+            SifirlamaUrl = "http://x",
+            SiparisNo = "ORD-1",
+            Kalemler = new[] { new { Ad = "Kitap", Adet = 1, Tutar = "10,00 ₺" } },
+            AraToplam = "10,00 ₺",
+            Indirim = "0,00 ₺",
+            Kargo = "0,00 ₺",
+            Toplam = "10,00 ₺",
+            SiparisUrl = "http://x",
+            Urunler = new[] { "Kitap" },
+            SepetUrl = "http://x"
         };
 
         Should.NotThrow(() => renderer.Render(templateName, model));
@@ -48,7 +57,10 @@ public class EmailTemplateRendererTests
             Ad = "Ayşe Yılmaz",
             SiparisNo = "ORD-20260810-AAAAAA",
             Kalemler = new[] { new { Ad = "Simyacı", Adet = 2, Tutar = "419,80 ₺" } },
-            AraToplam = "419,80 ₺", Indirim = "0,00 ₺", Kargo = "0,00 ₺", Toplam = "419,80 ₺",
+            AraToplam = "419,80 ₺",
+            Indirim = "0,00 ₺",
+            Kargo = "0,00 ₺",
+            Toplam = "419,80 ₺",
             SiparisUrl = "http://localhost:3000/hesabim/siparisler/ORD-20260810-AAAAAA"
         };
 
@@ -74,7 +86,10 @@ public class EmailTemplateRendererTests
             Ad = "Test",
             SiparisNo = "ORD-1",
             Kalemler = new[] { new { Ad = "<b>Suç & Ceza</b>", Adet = 1, Tutar = "10,00 ₺" } },
-            AraToplam = "10,00 ₺", Indirim = "0,00 ₺", Kargo = "0,00 ₺", Toplam = "10,00 ₺",
+            AraToplam = "10,00 ₺",
+            Indirim = "0,00 ₺",
+            Kargo = "0,00 ₺",
+            Toplam = "10,00 ₺",
             SiparisUrl = "http://x"
         };
 
