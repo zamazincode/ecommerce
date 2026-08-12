@@ -17,26 +17,26 @@ public static class SalesReportAggregator
 {
     public static IReadOnlyList<SalesReportItemDto> Fold(
         IEnumerable<DailySales> days, ReportGroupBy groupBy) => groupBy switch
-    {
-        ReportGroupBy.Day => days
-            .OrderBy(d => d.Day)
-            .Select(d => new SalesReportItemDto(d.Day, d.Revenue, d.OrderCount))
-            .ToList(),
+        {
+            ReportGroupBy.Day => days
+                .OrderBy(d => d.Day)
+                .Select(d => new SalesReportItemDto(d.Day, d.Revenue, d.OrderCount))
+                .ToList(),
 
-        ReportGroupBy.Week => days
-            .GroupBy(d => IsoWeekMonday(d.Day))
-            .OrderBy(g => g.Key)
-            .Select(g => new SalesReportItemDto(g.Key, g.Sum(x => x.Revenue), g.Sum(x => x.OrderCount)))
-            .ToList(),
+            ReportGroupBy.Week => days
+                .GroupBy(d => IsoWeekMonday(d.Day))
+                .OrderBy(g => g.Key)
+                .Select(g => new SalesReportItemDto(g.Key, g.Sum(x => x.Revenue), g.Sum(x => x.OrderCount)))
+                .ToList(),
 
-        ReportGroupBy.Month => days
-            .GroupBy(d => new DateOnly(d.Day.Year, d.Day.Month, 1))
-            .OrderBy(g => g.Key)
-            .Select(g => new SalesReportItemDto(g.Key, g.Sum(x => x.Revenue), g.Sum(x => x.OrderCount)))
-            .ToList(),
+            ReportGroupBy.Month => days
+                .GroupBy(d => new DateOnly(d.Day.Year, d.Day.Month, 1))
+                .OrderBy(g => g.Key)
+                .Select(g => new SalesReportItemDto(g.Key, g.Sum(x => x.Revenue), g.Sum(x => x.OrderCount)))
+                .ToList(),
 
-        _ => throw new ArgumentOutOfRangeException(nameof(groupBy))
-    };
+            _ => throw new ArgumentOutOfRangeException(nameof(groupBy))
+        };
 
     /// Dönem etiketi: o ISO haftasının PAZARTESİ'si. Yıl sonu/başı geçişlerinde
     /// ISOWeek takvim yılı sınırını değil ISO hafta sınırını esas alır — 31
