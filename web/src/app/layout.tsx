@@ -3,6 +3,7 @@ import { Geist, Geist_Mono, Inter } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 import Header from "@/components/layout/header";
+import { Providers } from "./providers";
 
 const geistHeading = Geist({ subsets: ["latin"], variable: "--font-heading" });
 
@@ -42,9 +43,11 @@ export default function RootLayout({
 			)}
 		>
 			<body className="min-h-full flex flex-col">
-				<Header />
+				<Providers>
+					<Header />
 
-				{children}
+					{children}
+				</Providers>
 			</body>
 		</html>
 	);
