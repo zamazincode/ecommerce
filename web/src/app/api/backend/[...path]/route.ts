@@ -86,6 +86,13 @@ async function forward(request: NextRequest, path: string[]) {
 		}
 	}
 
+	// 204/205/304: Response constructor bu durum kodlarında body kabul etmiyor
+	// (spec gereği "null body status"). .NET forgot-password gibi uçlar
+	// bilinçli olarak içeriksiz 204 dönüyor.
+	if ([204, 205, 304].includes(response.status)) {
+		return new NextResponse(null, { status: response.status });
+	}
+
 	const contentType = response.headers.get("content-type") ?? "";
 	const body = contentType.includes("application/json")
 		? await response.json().catch(() => null)

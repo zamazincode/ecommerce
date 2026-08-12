@@ -17,5 +17,20 @@ export const registerSchema = z.object({
 	lastName: z.string().min(1, "Soyad gerekli."),
 });
 
+export const forgotPasswordSchema = z.object({
+	email: z.email("Geçerli bir e-posta adresi girin."),
+});
+
+export const resetPasswordSchema = z.object({
+	newPassword: z
+		.string()
+		.min(8, "Şifre en az 8 karakter olmalı.")
+		.regex(/[A-Z]/, "En az bir büyük harf içermeli.")
+		.regex(/[a-z]/, "En az bir küçük harf içermeli.")
+		.regex(/[0-9]/, "En az bir rakam içermeli."),
+});
+
 export type LoginInput = z.infer<typeof loginSchema>;
 export type RegisterInput = z.infer<typeof registerSchema>;
+export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
+export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;

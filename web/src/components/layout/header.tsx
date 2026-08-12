@@ -1,20 +1,29 @@
+import Link from "next/link";
 import Logo from "../common/logo";
+import { AccountMenu } from "./account-menu";
+import { SearchBar } from "./search-bar";
+import { CategoryNav } from "./category-nav";
 
 export default function Header() {
 	return (
-		<div>
+		<div className="border-b">
 			<header className="container-x">
-				<div className="flex items-end justify-between gap-4">
-					upper navlinks
+				<div className="flex items-end justify-between gap-4 py-2 text-xs text-muted-foreground">
+					<Link href="/yardim" className="hover:underline">
+						Yardım
+					</Link>
+					<AccountMenu />
 				</div>
 
-				<div className="flex items-center justify-between gap-12">
-					<Logo />
-					<div>search bar</div>
-					<div>buttons</div>
+				<div className="flex items-center justify-between gap-12 py-4">
+					<Link href="/">
+						<Logo />
+					</Link>
+					<SearchBar />
+					{/* CartButton */}
 				</div>
 
-				<nav>navlinks</nav>
+				<CategoryNav />
 			</header>
 		</div>
 	);
