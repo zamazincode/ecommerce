@@ -3,6 +3,7 @@ import Logo from "../common/logo";
 import { AccountMenu } from "./account-menu";
 import { SearchBar } from "./search-bar";
 import { CategoryNav } from "./category-nav";
+import { CartButton } from "@/components/cart/cart-button";
 
 export default function Header() {
 	return (
@@ -20,7 +21,7 @@ export default function Header() {
 						<Logo />
 					</Link>
 					<SearchBar />
-					{/* CartButton */}
+					<CartButton />
 				</div>
 
 				<CategoryNav />

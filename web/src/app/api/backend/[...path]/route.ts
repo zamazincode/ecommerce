@@ -66,9 +66,14 @@ async function forward(request: NextRequest, path: string[]) {
 			headers: {
 				"Content-Type":
 					request.headers.get("content-type") ?? "application/json",
-				// Token varsa ekle, yoksa (misafir kullanıcı) hiç ekleme
-				// .NET tarafı Authorization başlığı olmayan isteği anonim kabul ediyor.
 				...(token ? { Authorization: `Bearer ${token}` } : {}),
+				// YENİ: misafir sepeti .NET tarafında bu başlıktan çözülüyor
+				// (CartOwner.ParseGuestId). Giriş yapılmışsa .NET zaten UserId'yi
+				// önceliklendiriyor, bu başlık zararsızca yok sayılıyor —
+				// koşulsuz iletmek güvenli.
+				...(request.headers.get("x-guest-id")
+					? { "X-Guest-Id": request.headers.get("x-guest-id")! }
+					: {}),
 			},
 			body: ["GET", "HEAD"].includes(request.method)
 				? undefined

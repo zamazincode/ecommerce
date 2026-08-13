@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { getProductBySlug } from "@/lib/api/catalog";
 import { formatPrice } from "@/lib/format";
 import { toSafeJsonLd } from "@/lib/utils";
+import { AddToCartButton } from "@/components/product/add-to-cart-button";
 
 export const revalidate = 60;
 
@@ -114,7 +115,12 @@ export default async function ProductPage({ params }: { params: Params }) {
 					</p>
 				) : null}
 
-				{/* Sepete Ekle butonu */}
+				<div className="mt-6">
+					<AddToCartButton
+						productId={product.id as number}
+						inStock={product.inStock}
+					/>
+				</div>
 			</div>
 		</main>
 	);

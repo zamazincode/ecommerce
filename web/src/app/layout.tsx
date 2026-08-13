@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import Header from "@/components/layout/header";
 import { Providers } from "./providers";
 import { Footer } from "@/components/layout/footer";
+import { CartPanel } from "@/components/cart/cart-panel";
 
 const geistHeading = Geist({ subsets: ["latin"], variable: "--font-heading" });
 
@@ -50,6 +51,7 @@ export default function RootLayout({
 					{children}
 
 					<Footer />
+					<CartPanel />
 				</Providers>
 			</body>
 		</html>
