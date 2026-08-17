@@ -14,16 +14,22 @@ export async function generateStaticParams() {
 	// Build sırasında en popüler ürünleri önceden üret. Kalan binlerce ürün
 	// ilk ziyarette üretilir, sonra 60sn'lik ISR'a girer — 1959 ürünün
 	// hepsini build'de üretmek gereksiz yere build süresini uzatır.
-	const response = await fetch(`${process.env.API_INTERNAL_URL}/api/home`);
-	if (!response.ok) return [];
+	try {
+		const response = await fetch(
+			`${process.env.API_INTERNAL_URL}/api/home`,
+		);
+		if (!response.ok) return [];
 
-	const home = await response.json();
-	const slugs = new Set<string>([
-		...home.bestsellers.map((p: { slug: string }) => p.slug),
-		...home.newArrivals.map((p: { slug: string }) => p.slug),
-	]);
+		const home = await response.json();
+		const slugs = new Set<string>([
+			...home.bestsellers.map((p: { slug: string }) => p.slug),
+			...home.newArrivals.map((p: { slug: string }) => p.slug),
+		]);
 
-	return Array.from(slugs).map((slug) => ({ slug }));
+		return Array.from(slugs).map((slug) => ({ slug }));
+	} catch {
+		return [];
+	}
 }
 
 export async function generateMetadata({

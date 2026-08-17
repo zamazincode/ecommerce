@@ -42,7 +42,7 @@ export function CartPanel() {
 					<div className="flex flex-1 flex-col items-center justify-center gap-3 text-center">
 						<p className="text-muted-foreground">Sepetin boş.</p>
 						<Button onClick={closeCartPanel}>
-							<Link href="/">Alışverişe Başla</Link>
+							<Link href={"/"}>Alışverişe Başla</Link>
 						</Button>
 					</div>
 				) : (
@@ -123,7 +123,7 @@ export function CartPanel() {
 							</div>
 
 							<Button className="w-full" onClick={closeCartPanel}>
-								<Link href="/odeme">Ödemeye Geç</Link>
+								<Link href={"/odeme"}>Ödemeye Geç</Link>
 							</Button>
 							<button
 								onClick={() => clearCart.mutate()}

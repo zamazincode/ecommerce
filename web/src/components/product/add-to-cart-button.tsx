@@ -21,8 +21,6 @@ export function AddToCartButton({
 	async function handleAdd() {
 		try {
 			await addToCart.mutateAsync({ productId, quantity });
-			// Ekledikten sonra sepet panelini (6.6) AÇ — kullanıcı "eklendi mi
-			// eklenmedi mi" belirsizliğinde kalmasın, anında görsün.
 			openCartPanel();
 		} catch (error) {
 			toast.add({

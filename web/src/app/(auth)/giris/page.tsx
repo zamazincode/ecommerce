@@ -11,11 +11,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { ChevronRight } from "lucide-react";
+import { useMergeCart } from "@/hooks/use-cart";
 
 export default function LoginPage() {
 	const router = useRouter();
 	const searchParams = useSearchParams();
 	const queryClient = useQueryClient();
+	const mergeCart = useMergeCart();
+
 	const [serverError, setServerError] = useState<string | null>(null);
 
 	const {
@@ -41,6 +44,9 @@ export default function LoginPage() {
 		}
 
 		await queryClient.invalidateQueries({ queryKey: ["session"] });
+
+		await mergeCart.mutateAsync();
+
 		router.push(searchParams.get("returnUrl") ?? "/");
 	}
 
