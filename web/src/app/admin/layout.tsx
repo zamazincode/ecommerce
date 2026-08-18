@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
 import { serverApiFetch } from "@/lib/api/server";
-import { Toaster } from "@/components/ui/toast";
 import type { components } from "@/types/api";
 import { AdminSidebar } from "@/components/admin/sidebar";
 
@@ -23,7 +22,6 @@ export default async function AdminLayout({
 		<div className="flex min-h-screen">
 			<AdminSidebar />
 			<main className="container-x flex-1 py-8">{children}</main>
-			<Toaster />
 		</div>
 	);
 }

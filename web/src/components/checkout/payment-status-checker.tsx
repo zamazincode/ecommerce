@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { apiFetch } from "@/lib/api/client";
 import { Button } from "@/components/ui/button";
+import { toast } from "@/components/ui/toast";
 import type { components } from "@/types/api";
 
 type PaymentStatusDto = components["schemas"]["PaymentStatusDto"];
@@ -25,6 +26,8 @@ export function PaymentStatusChecker({ orderNumber }: { orderNumber: string }) {
 				`payments/${orderNumber}/status`,
 			);
 			setStatus(result);
+		} catch {
+			toast.add({ title: "Durum kontrol edilemedi", type: "error" });
 		} finally {
 			setIsChecking(false);
 		}

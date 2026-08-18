@@ -8,7 +8,7 @@ export default function FavoritesPage() {
 	const { data: favorites, isLoading } = useFavorites();
 
 	return (
-		<main className="container-x py-8">
+		<div>
 			<h1 className="mb-6 text-xl font-semibold">Favorilerim</h1>
 
 			{isLoading ? (
@@ -22,6 +22,6 @@ export default function FavoritesPage() {
 					))}
 				</div>
 			)}
-		</main>
+		</div>
 	);
 }

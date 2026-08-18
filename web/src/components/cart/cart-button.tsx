@@ -14,6 +14,7 @@ export function CartButton() {
 			variant="ghost"
 			size="sm"
 			onClick={openCartPanel}
+			aria-label="Sepeti aç"
 			className="relative"
 		>
 			<ShoppingCartIcon className="size-5" />

@@ -101,7 +101,7 @@ export function ProductImages({ productId }: { productId: number }) {
 							{/* eslint-disable-next-line @next/next/no-img-element -- Cloudinary/D&R URL'i, sabit boyutlu küçük bir küme; next/image'ın optimizasyon maliyetine değmez */}
 							<img
 								src={image.url}
-								alt=""
+								alt={`Ürün görseli ${Number(image.displayOrder) + 1}`}
 								className="aspect-2/3 w-full rounded object-cover"
 							/>
 							<button

@@ -1,28 +1,20 @@
+import { Suspense } from "react";
 import { serverApiFetch } from "@/lib/api/server";
 import { Card } from "@/components/ui/card";
-import { SalesChart } from "@/components/admin/sales-chart";
-import { CategoryChart } from "@/components/admin/category-chart";
+import { Skeleton } from "@/components/ui/skeleton";
+import { ErrorBoundary } from "@/components/error-boundary";
+import { SalesChartSection } from "@/components/admin/sales-chart-section";
+import { CategoryChartSection } from "@/components/admin/category-chart-section";
 import type { components } from "@/types/api";
 
 type DashboardSummaryDto = components["schemas"]["DashboardSummaryDto"];
-type SalesReportItemDto = components["schemas"]["SalesReportItemDto"];
-type CategoryDto = components["schemas"]["CategoryDto"];
 type TopSearchDto = components["schemas"]["TopSearchDto"];
 
 export default async function AdminDashboardPage() {
-	const today = new Date();
-	const thirtyDaysAgo = new Date(today);
-	thirtyDaysAgo.setDate(today.getDate() - 29);
-	const from = thirtyDaysAgo.toISOString().slice(0, 10);
-	const to = today.toISOString().slice(0, 10);
-
-	// Dördü PARALEL — sırayla await etmek 4 kat gecikme demek.
-	const [summary, sales, categories, topSearches] = await Promise.all([
+	// İkisi PARALEL — grafik verisi (Suspense'e sarılı) ayrıca, kendi
+	// bileşenlerinde çekiliyor; KPI kartları onu beklemeden render olsun diye.
+	const [summary, topSearches] = await Promise.all([
 		serverApiFetch<DashboardSummaryDto>("admin/dashboard"),
-		serverApiFetch<SalesReportItemDto[]>(
-			`admin/reports/sales?from=${from}&to=${to}&groupBy=day`,
-		),
-		serverApiFetch<CategoryDto[]>("categories"),
 		serverApiFetch<TopSearchDto[]>("admin/reports/top-searches"),
 	]);
 
@@ -74,13 +66,33 @@ export default async function AdminDashboardPage() {
 					<h2 className="mb-2 font-medium">
 						Son 30 Gün — Günlük Satış
 					</h2>
-					<SalesChart data={sales ?? []} />
+					<ErrorBoundary
+						fallback={
+							<p className="text-sm text-muted-foreground">
+								Grafik yüklenemedi.
+							</p>
+						}
+					>
+						<Suspense fallback={<Skeleton className="h-60 w-full" />}>
+							<SalesChartSection />
+						</Suspense>
+					</ErrorBoundary>
 				</div>
 				<div>
 					<h2 className="mb-2 font-medium">
 						Kategoriye Göre Ürün Dağılımı
 					</h2>
-					<CategoryChart categories={categories ?? []} />
+					<ErrorBoundary
+						fallback={
+							<p className="text-sm text-muted-foreground">
+								Grafik yüklenemedi.
+							</p>
+						}
+					>
+						<Suspense fallback={<Skeleton className="h-60 w-full" />}>
+							<CategoryChartSection />
+						</Suspense>
+					</ErrorBoundary>
 				</div>
 			</div>
 

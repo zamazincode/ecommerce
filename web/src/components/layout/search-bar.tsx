@@ -84,7 +84,7 @@ export function SearchBar() {
 								{s.imageUrl ? (
 									<Image
 										src={s.imageUrl}
-										alt=""
+										alt={s.name}
 										width={32}
 										height={48}
 										className="rounded object-cover"

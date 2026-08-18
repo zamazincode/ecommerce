@@ -11,6 +11,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { toast } from "@/components/ui/toast";
 
 export default function ForgotPasswordPage() {
 	const [sent, setSent] = useState(false);
@@ -23,11 +24,19 @@ export default function ForgotPasswordPage() {
 	});
 
 	async function onSubmit(input: ForgotPasswordInput) {
-		await apiFetch("auth/forgot-password", {
-			method: "POST",
-			body: JSON.stringify(input),
-		});
-		setSent(true);
+		try {
+			await apiFetch("auth/forgot-password", {
+				method: "POST",
+				body: JSON.stringify(input),
+			});
+			setSent(true);
+		} catch {
+			toast.add({
+				title: "Gönderilemedi",
+				description: "Bir hata oluştu, lütfen tekrar dene.",
+				type: "error",
+			});
+		}
 	}
 
 	if (sent) {

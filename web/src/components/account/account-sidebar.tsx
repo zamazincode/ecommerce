@@ -3,12 +3,13 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { UserIcon, PackageIcon, MapPinIcon } from "lucide-react";
+import { UserIcon, PackageIcon, MapPinIcon, HeartIcon } from "lucide-react";
 
 const LINKS = [
 	{ href: "/hesabim", label: "Genel Bakış", icon: UserIcon },
 	{ href: "/hesabim/siparislerim", label: "Siparişlerim", icon: PackageIcon },
 	{ href: "/hesabim/adreslerim", label: "Adreslerim", icon: MapPinIcon },
+	{ href: "/hesabim/favorilerim", label: "Favorilerim", icon: HeartIcon },
 ];
 
 export function AccountSidebar() {

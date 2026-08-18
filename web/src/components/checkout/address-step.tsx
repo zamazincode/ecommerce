@@ -2,10 +2,16 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import {
+	useQuery,
+	useMutation,
+	useQueryClient,
+} from "@tanstack/react-query";
 import { apiFetch, ApiError } from "@/lib/api/client";
 import { useCart } from "@/hooks/use-cart";
+import { queryKeys } from "@/lib/api/query-keys";
 import { Button } from "@/components/ui/button";
+import { toast } from "@/components/ui/toast";
 import type { components } from "@/types/api";
 import Link from "next/link";
 
@@ -14,6 +20,7 @@ type OrderDetailDto = components["schemas"]["OrderDetailDto"];
 
 export function AddressStep() {
 	const router = useRouter();
+	const queryClient = useQueryClient();
 	const { data: cart } = useCart();
 	const [selectedAddressId, setSelectedAddressId] = useState<number | null>(
 		null,
@@ -42,9 +49,23 @@ export function AddressStep() {
 		},
 		onError: (error) => {
 			if (error instanceof ApiError && error.status === 409) {
-				// TODO: "Sepetiniz değişti, lütfen tekrar kontrol edin" göster,
-				// sepet sorgusunu invalidate et.
+				// Sunucudaki toplam ekranda gösterilenle uyuşmuyor — sepet
+				// checkout sırasında değişmiş (fiyat/kupon/stok). Sepeti
+				// tazeleyip kullanıcıyı bilgilendiriyoruz, sipariş oluşmadı.
+				queryClient.invalidateQueries({ queryKey: queryKeys.cart });
+				toast.add({
+					title: "Sepetiniz değişti",
+					description:
+						"Fiyat, kupon ya da stok güncellendi — lütfen sepetini kontrol edip tekrar dene.",
+					type: "error",
+				});
+				return;
 			}
+			toast.add({
+				title: "Sipariş oluşturulamadı",
+				description: "Bir hata oluştu, lütfen tekrar dene.",
+				type: "error",
+			});
 		},
 	});
 

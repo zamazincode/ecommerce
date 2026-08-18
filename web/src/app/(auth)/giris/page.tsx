@@ -10,6 +10,7 @@ import { loginSchema, type LoginInput } from "@/lib/validations/auth";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { toast } from "@/components/ui/toast";
 import { ChevronRight } from "lucide-react";
 import { useMergeCart } from "@/hooks/use-cart";
 
@@ -45,7 +46,17 @@ export default function LoginPage() {
 
 		await queryClient.invalidateQueries({ queryKey: ["session"] });
 
-		await mergeCart.mutateAsync();
+		try {
+			await mergeCart.mutateAsync();
+		} catch {
+			// Giriş zaten başarılı — sepet birleştirme başarısız olsa bile
+			// kullanıcıyı burada tıkanmış bırakma, yönlendirmeye devam et.
+			toast.add({
+				title: "Sepetin birleştirilemedi",
+				description: "Misafir sepetindeki ürünler eklenemedi.",
+				type: "error",
+			});
+		}
 
 		router.push(searchParams.get("returnUrl") ?? "/");
 	}

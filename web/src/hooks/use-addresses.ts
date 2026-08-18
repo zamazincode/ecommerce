@@ -13,6 +13,7 @@ export function useAddresses() {
 	return useQuery({
 		queryKey: key,
 		queryFn: () => apiFetch<AddressDto[]>("addresses"),
+		meta: { errorMessage: "Adreslerin yüklenemedi." },
 	});
 }
 
