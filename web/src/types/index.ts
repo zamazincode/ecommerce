@@ -7,3 +7,32 @@ export type PagedResultOfProductListDto =
 export type CartDto = components["schemas"]["CartDto"];
 export type OrderDetailDto = components["schemas"]["OrderDetailDto"];
 export type AuthResponse = components["schemas"]["AuthResponse"];
+
+export interface AdminProductFilters {
+	q?: string;
+	categoryId?: number;
+	isActive?: boolean;
+	includeDeleted?: boolean;
+	sortBy?: "price" | "name" | "newest";
+	sortDir?: "asc" | "desc";
+	page?: number;
+	pageSize?: number;
+}
+
+export interface AdminOrderFilters {
+	status?: components["schemas"]["OrderStatus"];
+	dateFrom?: string; // "yyyy-MM-dd" — DateOnly, backend Kind=Utc tuzağı yüzünden ZAMAN DAMGASI DEĞİL
+	dateTo?: string;
+	q?: string;
+	page?: number;
+}
+
+export interface AdminReviewFilters {
+	onlyPending: boolean;
+}
+
+export interface AdminAuditLogFilters {
+	entityType?: string;
+	action?: string;
+	page?: number;
+}

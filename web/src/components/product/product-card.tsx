@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { formatPrice } from "@/lib/format";
 import { Card } from "@/components/ui/card";
+import { FavoriteButton } from "@/components/product/favorite-button";
 import type { ProductListDto } from "@/types";
 
 export function ProductCard({ product }: { product: ProductListDto }) {
@@ -10,7 +11,8 @@ export function ProductCard({ product }: { product: ProductListDto }) {
 		product.discountedPrice < product.price;
 
 	return (
-		<Card className="p-3">
+		<Card className="relative p-3">
+			<FavoriteButton productId={product.id as number} />
 			<Link href={`/urun/${product.slug}`} className="block">
 				<div className="relative aspect-2/3 w-full overflow-hidden rounded-md bg-muted">
 					{product.imageUrl ? (

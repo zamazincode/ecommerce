@@ -7,6 +7,7 @@ import { apiFetch, ApiError } from "@/lib/api/client";
 import { useCart } from "@/hooks/use-cart";
 import { Button } from "@/components/ui/button";
 import type { components } from "@/types/api";
+import Link from "next/link";
 
 type AddressDto = components["schemas"]["AddressDto"];
 type OrderDetailDto = components["schemas"]["OrderDetailDto"];
@@ -51,22 +52,36 @@ export function AddressStep() {
 		<div>
 			<h1 className="mb-4 text-lg font-semibold">Teslimat Adresi</h1>
 
-			<div className="space-y-2">
-				{addresses?.map((address) => (
-					<label key={address.id} className="flex items-center gap-2">
-						<input
-							type="radio"
-							name="address"
-							checked={selectedAddressId === address.id}
-							onChange={() =>
-								setSelectedAddressId(address.id as number)
-							}
-						/>
-						{address.title} — {address.fullAddress},{" "}
-						{address.district}/{address.city}
-					</label>
-				))}
-			</div>
+			{addresses?.length === 0 ? (
+				<div className="rounded-lg border border-dashed p-6 text-center">
+					<p className="mb-3 text-sm text-muted-foreground">
+						Henüz kayıtlı adresin yok.
+					</p>
+					<Button variant="outline">
+						<Link href="/hesabim/adreslerim">Adres Ekle</Link>
+					</Button>
+				</div>
+			) : (
+				<div className="space-y-2">
+					{addresses?.map((address) => (
+						<label
+							key={address.id}
+							className="flex items-center gap-2"
+						>
+							<input
+								type="radio"
+								name="address"
+								checked={selectedAddressId === address.id}
+								onChange={() =>
+									setSelectedAddressId(address.id as number)
+								}
+							/>
+							{address.title} — {address.fullAddress},{" "}
+							{address.district}/{address.city}
+						</label>
+					))}
+				</div>
+			)}
 
 			<Button
 				className="mt-6"

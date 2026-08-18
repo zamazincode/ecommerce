@@ -1,10 +1,15 @@
 import type { Metadata } from "next";
 import Image from "next/image";
+import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getProductBySlug } from "@/lib/api/catalog";
+import {
+	getProductBySlug,
+	getRelatedProducts,
+} from "@/lib/api/catalog";
 import { formatPrice } from "@/lib/format";
 import { toSafeJsonLd } from "@/lib/utils";
 import { AddToCartButton } from "@/components/product/add-to-cart-button";
+import { ProductCard } from "@/components/product/product-card";
 
 export const revalidate = 60;
 
@@ -56,6 +61,8 @@ export default async function ProductPage({ params }: { params: Params }) {
 
 	if (!product) notFound();
 
+	const related = await getRelatedProducts(product.id as number);
+
 	// Google shop listte çıkması için
 	const jsonLd = {
 		"@context": "https://schema.org",
@@ -98,7 +105,17 @@ export default async function ProductPage({ params }: { params: Params }) {
 				<h1 className="text-2xl font-semibold">{product.name}</h1>
 				{product.authors.length > 0 ? (
 					<p className="text-muted-foreground">
-						{product.authors.map((a) => a.name).join(", ")}
+						{product.authors.map((author, i) => (
+							<span key={author.id}>
+								{i > 0 ? ", " : ""}
+								<Link
+									href={`/yazar/${author.slug}`}
+									className="hover:underline"
+								>
+									{author.name}
+								</Link>
+							</span>
+						))}
 					</p>
 				) : null}
 
@@ -128,6 +145,22 @@ export default async function ProductPage({ params }: { params: Params }) {
 					/>
 				</div>
 			</div>
+
+			{related.length > 0 ? (
+				// `md:col-span-2` ŞART — `main` iki kolonlu bir grid, bu
+				// olmadan bölüm ikinci kolonun altına sıkışıp yarım genişlikte
+				// görünürdü.
+				<section className="md:col-span-2 mt-4">
+					<h2 className="mb-4 text-lg font-semibold">
+						Benzer Ürünler
+					</h2>
+					<div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-8">
+						{related.map((product) => (
+							<ProductCard key={product.id} product={product} />
+						))}
+					</div>
+				</section>
+			) : null}
 		</main>
 	);
 }
