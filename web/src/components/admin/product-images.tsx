@@ -3,9 +3,12 @@
 import { useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api/client";
+import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/components/ui/toast";
-import { XIcon } from "lucide-react";
+import { ImageIcon, LoaderIcon, XIcon } from "lucide-react";
 import type { components } from "@/types/api";
 
 type SignedUploadDto = components["schemas"]["SignedUploadDto"];
@@ -90,54 +93,103 @@ export function ProductImages({ productId }: { productId: number }) {
 		},
 	});
 
+	const hasImages = !!images && images.length > 0;
+
 	return (
-		<div>
-			<h2 className="mb-2 font-medium">Görseller</h2>
+		<Card>
+			<CardHeader>
+				<CardTitle>Görseller</CardTitle>
+				{hasImages ? (
+					<CardAction>
+						<Button
+							type="button"
+							variant="outline"
+							size="sm"
+							disabled={isUploading}
+							onClick={() => fileInputRef.current?.click()}
+						>
+							{isUploading ? "Yükleniyor…" : "Görsel Yükle"}
+						</Button>
+					</CardAction>
+				) : null}
+			</CardHeader>
+			<CardContent>
+				<input
+					ref={fileInputRef}
+					type="file"
+					accept="image/*"
+					className="hidden"
+					onChange={(e) => {
+						const file = e.target.files?.[0];
+						if (file) upload.mutate(file);
+						e.target.value = ""; // aynı dosyayı arka arkaya seçebilmek için
+					}}
+				/>
 
-			{images && images.length > 0 ? (
-				<div className="mb-4 grid grid-cols-3 gap-2">
-					{images.map((image) => (
-						<div key={image.id as number} className="group relative">
-							{/* eslint-disable-next-line @next/next/no-img-element -- Cloudinary/D&R URL'i, sabit boyutlu küçük bir küme; next/image'ın optimizasyon maliyetine değmez */}
-							<img
-								src={image.url}
-								alt={`Ürün görseli ${Number(image.displayOrder) + 1}`}
-								className="aspect-2/3 w-full rounded object-cover"
-							/>
-							<button
-								onClick={() => {
-									if (confirm("Bu görsel silinsin mi?"))
-										deleteImage.mutate(image.id as number);
-								}}
-								className="absolute top-1 right-1 rounded-full bg-background/80 p-1 opacity-0 group-hover:opacity-100"
-								aria-label="Görseli sil"
+				{hasImages ? (
+					<div className="grid grid-cols-3 gap-3">
+						{images.map((image) => (
+							<div
+								key={image.id as number}
+								className="group relative aspect-2/3 overflow-hidden rounded-xl bg-muted/40 ring-1 ring-border"
 							>
-								<XIcon className="size-3" />
-							</button>
-						</div>
-					))}
-				</div>
-			) : null}
-
-			<input
-				ref={fileInputRef}
-				type="file"
-				accept="image/*"
-				className="hidden"
-				onChange={(e) => {
-					const file = e.target.files?.[0];
-					if (file) upload.mutate(file);
-					e.target.value = ""; // aynı dosyayı arka arkaya seçebilmek için
-				}}
-			/>
-			<Button
-				type="button"
-				variant="outline"
-				disabled={isUploading}
-				onClick={() => fileInputRef.current?.click()}
-			>
-				{isUploading ? "Yükleniyor…" : "Görsel Yükle"}
-			</Button>
-		</div>
+								{/* eslint-disable-next-line @next/next/no-img-element -- Cloudinary/D&R URL'i, sabit boyutlu küçük bir küme; next/image'ın optimizasyon maliyetine değmez */}
+								<img
+									src={image.url}
+									alt={`Ürün görseli ${Number(image.displayOrder) + 1}`}
+									className="size-full object-contain p-1"
+								/>
+								<ConfirmDialog
+									trigger={
+										<button
+											type="button"
+											aria-label="Görseli sil"
+											className="absolute top-1 right-1 rounded-full bg-background/80 p-1 opacity-0 transition-opacity group-hover:opacity-100 max-md:opacity-100"
+										>
+											<XIcon className="size-3" />
+										</button>
+									}
+									title="Bu görsel silinsin mi?"
+									tone="danger"
+									confirmLabel="Sil"
+									onConfirm={() =>
+										deleteImage.mutate(image.id as number)
+									}
+								/>
+							</div>
+						))}
+						{isUploading ? (
+							<div className="relative flex aspect-2/3 items-center justify-center overflow-hidden rounded-xl bg-muted/40 ring-1 ring-border">
+								<Skeleton className="absolute inset-0 rounded-none" />
+								<LoaderIcon className="relative size-5 animate-spin text-muted-foreground" />
+							</div>
+						) : null}
+					</div>
+				) : (
+					<button
+						type="button"
+						disabled={isUploading}
+						onClick={() => fileInputRef.current?.click()}
+						className="flex w-full flex-col items-center gap-2 rounded-xl border-2 border-dashed p-8 text-center text-sm text-muted-foreground hover:border-primary/40 hover:text-foreground disabled:pointer-events-none disabled:opacity-50"
+					>
+						{isUploading ? (
+							<LoaderIcon className="size-6 animate-spin" />
+						) : (
+							<ImageIcon className="size-6" />
+						)}
+						<span>
+							{isUploading
+								? "Yükleniyor…"
+								: "Bu ürünün henüz görseli yok"}
+						</span>
+						{!isUploading ? (
+							<span className="font-medium text-primary">
+								Görsel Yükle
+							</span>
+						) : null}
+					</button>
+				)}
+			</CardContent>
+		</Card>
 	);
 }

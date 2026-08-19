@@ -6,9 +6,9 @@ export default function AccountLayout({
 	children: React.ReactNode;
 }) {
 	return (
-		<main className="container-x flex gap-8 py-8">
+		<main className="container-x grid gap-6 py-6 md:py-8 lg:grid-cols-[240px_1fr]">
 			<AccountSidebar />
-			<div className="flex-1">{children}</div>
+			<div className="min-w-0">{children}</div>
 		</main>
 	);
 }

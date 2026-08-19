@@ -1,9 +1,13 @@
+import { PageHeader } from "@/components/admin/page-header";
 import { ProductForm } from "@/components/admin/product-form";
 
 export default function NewProductPage() {
 	return (
-		<div>
-			<h1 className="mb-6 text-xl font-semibold">Yeni Ürün</h1>
+		<div className="space-y-6">
+			<PageHeader
+				title="Yeni Ürün"
+				description="Yeni bir katalog kaydı oluştur"
+			/>
 			<ProductForm />
 		</div>
 	);

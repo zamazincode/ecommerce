@@ -19,15 +19,29 @@ export function CategoryChart({ categories }: { categories: CategoryDto[] }) {
 	return (
 		<ResponsiveContainer width="100%" height={240}>
 			<BarChart data={roots} layout="vertical">
-				<XAxis type="number" tick={{ fontSize: 12 }} />
+				<XAxis
+					type="number"
+					axisLine={false}
+					tickLine={false}
+					tick={{ fill: "var(--muted-foreground)", fontSize: 12 }}
+				/>
 				<YAxis
 					type="category"
 					dataKey="name"
 					width={100}
-					tick={{ fontSize: 11 }}
+					axisLine={false}
+					tickLine={false}
+					tick={{ fill: "var(--muted-foreground)", fontSize: 11 }}
 				/>
-				<Tooltip />
-				<Bar dataKey="ürünSayısı" fill="var(--primary)" />
+				<Tooltip
+					contentStyle={{
+						borderRadius: 12,
+						border: "1px solid var(--border)",
+						boxShadow: "var(--shadow-pop)",
+						background: "var(--popover)",
+					}}
+				/>
+				<Bar dataKey="ürünSayısı" fill="var(--chart-1)" radius={[0, 6, 6, 0]} />
 			</BarChart>
 		</ResponsiveContainer>
 	);

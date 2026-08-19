@@ -29,6 +29,7 @@ export interface AdminOrderFilters {
 
 export interface AdminReviewFilters {
 	onlyPending: boolean;
+	page?: number;
 }
 
 export interface AdminAuditLogFilters {

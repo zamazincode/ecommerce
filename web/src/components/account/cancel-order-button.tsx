@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiFetch, ApiError } from "@/lib/api/client";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { toast } from "@/components/ui/toast";
 
 export function CancelOrderButton({ orderNumber }: { orderNumber: string }) {
@@ -11,8 +12,6 @@ export function CancelOrderButton({ orderNumber }: { orderNumber: string }) {
 	const [isPending, setIsPending] = useState(false);
 
 	async function handleCancel() {
-		if (!confirm("Bu siparişi iptal etmek istediğine emin misin?")) return;
-
 		setIsPending(true);
 		try {
 			await apiFetch(`orders/${orderNumber}/cancel`, { method: "POST" });
@@ -35,13 +34,17 @@ export function CancelOrderButton({ orderNumber }: { orderNumber: string }) {
 	}
 
 	return (
-		<Button
-			variant="destructive"
-			size="sm"
-			onClick={handleCancel}
-			disabled={isPending}
-		>
-			{isPending ? "İptal ediliyor…" : "Siparişi İptal Et"}
-		</Button>
+		<ConfirmDialog
+			trigger={
+				<Button variant="destructive" size="sm" disabled={isPending}>
+					{isPending ? "İptal ediliyor…" : "Siparişi İptal Et"}
+				</Button>
+			}
+			title="Bu siparişi iptal etmek istediğine emin misin?"
+			description="Bu işlem geri alınamaz, stok iadesi otomatik yapılır."
+			confirmLabel="Siparişi İptal Et"
+			tone="danger"
+			onConfirm={handleCancel}
+		/>
 	);
 }

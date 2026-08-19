@@ -2,10 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono, Inter } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
-import Header from "@/components/layout/header";
 import { Providers } from "./providers";
-import { Footer } from "@/components/layout/footer";
-import { CartPanel } from "@/components/cart/cart-panel";
 
 const geistHeading = Geist({ subsets: ["latin"], variable: "--font-heading" });
 
@@ -45,14 +42,7 @@ export default function RootLayout({
 			)}
 		>
 			<body className="min-h-full flex flex-col">
-				<Providers>
-					<Header />
-
-					{children}
-
-					<Footer />
-					<CartPanel />
-				</Providers>
+				<Providers>{children}</Providers>
 			</body>
 		</html>
 	);

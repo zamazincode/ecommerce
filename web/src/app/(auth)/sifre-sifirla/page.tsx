@@ -4,14 +4,18 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useState } from "react";
+import Link from "next/link";
+import { AlertCircleIcon, EyeIcon, EyeOffIcon } from "lucide-react";
 import { apiFetch, ApiError } from "@/lib/api/client";
 import {
 	resetPasswordSchema,
 	type ResetPasswordInput,
 } from "@/lib/validations/auth";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { FormField } from "@/components/ui/form-field";
+import { EmptyState } from "@/components/ui/empty-state";
+import Logo from "@/components/common/logo";
 
 export default function ResetPasswordPage() {
 	const router = useRouter();
@@ -19,6 +23,7 @@ export default function ResetPasswordPage() {
 	const email = searchParams.get("email");
 	const token = searchParams.get("token");
 	const [serverError, setServerError] = useState<string | null>(null);
+	const [showPassword, setShowPassword] = useState(false);
 
 	const {
 		register,
@@ -30,12 +35,22 @@ export default function ResetPasswordPage() {
 
 	if (!email || !token) {
 		return (
-			<main className="container-x py-16 text-center">
-				<h1 className="text-xl font-semibold">Geçersiz bağlantı</h1>
-				<p className="mt-2 text-muted-foreground">
-					Bu şifre sıfırlama bağlantısı eksik ya da bozuk görünüyor.
-				</p>
-			</main>
+			<div className="w-full max-w-md rounded-2xl border bg-card p-8 shadow-card">
+				<EmptyState
+					icon={AlertCircleIcon}
+					tone="danger"
+					title="Geçersiz bağlantı"
+					description="Bu şifre sıfırlama bağlantısı eksik ya da bozuk görünüyor."
+					action={
+						<Button
+							render={<Link href="/sifremi-unuttum" />}
+							nativeButton={false}
+						>
+							Tekrar İste
+						</Button>
+					}
+				/>
+			</div>
 		);
 	}
 
@@ -64,28 +79,50 @@ export default function ResetPasswordPage() {
 	}
 
 	return (
-		<main className="container-x flex min-h-[60vh] items-center justify-center py-16">
-			<form
-				onSubmit={handleSubmit(onSubmit)}
-				className="w-full max-w-sm space-y-4"
-			>
-				<h1 className="text-xl font-semibold">Yeni Şifre Belirle</h1>
+		<div className="w-full max-w-md rounded-2xl border bg-card p-8 shadow-card">
+			<Link href="/" className="mb-6 flex justify-center">
+				<Logo />
+			</Link>
+
+			<h1 className="mb-6 text-center text-lg font-semibold">
+				Yeni Şifre Belirle
+			</h1>
+
+			<form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
 				{serverError ? (
-					<p className="text-sm text-destructive">{serverError}</p>
+					<p className="flex items-center gap-2 rounded-lg bg-destructive/10 p-3 text-sm text-destructive">
+						<AlertCircleIcon className="size-4 shrink-0" />
+						{serverError}
+					</p>
 				) : null}
-				<div className="space-y-2">
-					<Label htmlFor="newPassword">Yeni Şifre</Label>
-					<Input
-						id="newPassword"
-						type="password"
-						{...register("newPassword")}
-					/>
-					{errors.newPassword ? (
-						<p className="text-sm text-destructive">
-							{errors.newPassword.message}
-						</p>
-					) : null}
-				</div>
+
+				<FormField
+					label="Yeni Şifre"
+					htmlFor="newPassword"
+					error={errors.newPassword?.message}
+				>
+					<div className="relative">
+						<Input
+							id="newPassword"
+							type={showPassword ? "text" : "password"}
+							{...register("newPassword")}
+							className="pr-10"
+						/>
+						<Button
+							type="button"
+							variant="ghost"
+							size="icon-sm"
+							className="absolute top-1 right-1 bottom-1 h-auto text-muted-foreground"
+							onClick={() => setShowPassword((prev) => !prev)}
+							aria-label={
+								showPassword ? "Şifreyi gizle" : "Şifreyi göster"
+							}
+						>
+							{showPassword ? <EyeOffIcon /> : <EyeIcon />}
+						</Button>
+					</div>
+				</FormField>
+
 				<Button
 					type="submit"
 					className="w-full"
@@ -94,6 +131,6 @@ export default function ResetPasswordPage() {
 					{isSubmitting ? "Kaydediliyor…" : "Şifreyi Güncelle"}
 				</Button>
 			</form>
-		</main>
+		</div>
 	);
 }

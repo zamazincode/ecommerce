@@ -1,16 +1,21 @@
 "use client";
 
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import {
 	Dialog,
+	DialogClose,
 	DialogContent,
+	DialogFooter,
 	DialogHeader,
 	DialogTitle,
 	DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { NativeSelect } from "@/components/ui/native-select";
+import { FormField } from "@/components/ui/form-field";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
@@ -45,6 +50,7 @@ export function CategoryFormDialog({
 	categories: AdminCategoryDto[];
 	trigger: React.ReactNode;
 }) {
+	const [open, setOpen] = useState(false);
 	const isEdit = !!category;
 	const create = useCreateCategory();
 	const update = useUpdateCategory();
@@ -53,6 +59,7 @@ export function CategoryFormDialog({
 		register,
 		handleSubmit,
 		setError,
+		reset,
 		formState: { errors, isSubmitting },
 	} = useForm<FormRawValues, unknown, FormInput>({
 		resolver: zodResolver(schema),
@@ -96,6 +103,8 @@ export function CategoryFormDialog({
 				title: isEdit ? "Kategori güncellendi" : "Kategori oluşturuldu",
 				type: "success",
 			});
+			setOpen(false);
+			reset();
 		} catch (error) {
 			// Backend'in iki hata mesajı da FIELD-SPESİFİK değil (BusinessRuleException,
 			// genel bir 400) — setError yerine tek bir form-üstü hata gösteriyoruz.
@@ -113,31 +122,27 @@ export function CategoryFormDialog({
 	}
 
 	return (
-		<Dialog>
+		<Dialog open={open} onOpenChange={setOpen}>
 			<DialogTrigger render={trigger as React.ReactElement} />
-			<DialogContent>
+			<DialogContent className="sm:max-w-lg">
 				<DialogHeader>
 					<DialogTitle>
 						{isEdit ? "Kategoriyi Düzenle" : "Yeni Kategori"}
 					</DialogTitle>
 				</DialogHeader>
 				<form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-					<div>
-						<Label htmlFor="name">Ad</Label>
+					{errors.parentId ? (
+						<p className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">
+							{errors.parentId.message}
+						</p>
+					) : null}
+
+					<FormField label="Ad" htmlFor="name" error={errors.name?.message}>
 						<Input id="name" {...register("name")} />
-						{errors.name ? (
-							<p className="text-sm text-destructive">
-								{errors.name.message}
-							</p>
-						) : null}
-					</div>
-					<div>
-						<Label htmlFor="parentId">Üst Kategori (opsiyonel)</Label>
-						<select
-							id="parentId"
-							{...register("parentId")}
-							className="w-full rounded-md border px-3 py-2"
-						>
+					</FormField>
+
+					<FormField label="Üst Kategori (opsiyonel)" htmlFor="parentId">
+						<NativeSelect id="parentId" {...register("parentId")}>
 							<option value="">Kök kategori</option>
 							{categories
 								.filter((c) => !disabledIds.has(c.id as number))
@@ -147,30 +152,32 @@ export function CategoryFormDialog({
 										{c.name}
 									</option>
 								))}
-						</select>
-						{errors.parentId ? (
-							<p className="text-sm text-destructive">
-								{errors.parentId.message}
-							</p>
-						) : null}
-					</div>
-					<div>
-						<Label htmlFor="displayOrder">Sıra</Label>
+						</NativeSelect>
+					</FormField>
+
+					<FormField label="Sıra" htmlFor="displayOrder">
 						<Input
 							id="displayOrder"
 							type="number"
 							{...register("displayOrder")}
 						/>
-					</div>
+					</FormField>
+
 					{isEdit ? (
 						<div className="flex items-center gap-2">
 							<Switch id="isActive" {...register("isActive")} />
 							<Label htmlFor="isActive">Aktif</Label>
 						</div>
 					) : null}
-					<Button type="submit" disabled={isSubmitting}>
-						{isEdit ? "Güncelle" : "Oluştur"}
-					</Button>
+
+					<DialogFooter>
+						<DialogClose render={<Button type="button" variant="outline" />}>
+							İptal
+						</DialogClose>
+						<Button type="submit" disabled={isSubmitting}>
+							{isEdit ? "Güncelle" : "Oluştur"}
+						</Button>
+					</DialogFooter>
 				</form>
 			</DialogContent>
 		</Dialog>

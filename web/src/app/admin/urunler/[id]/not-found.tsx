@@ -1,17 +1,24 @@
 import Link from "next/link";
+import { BookOpenIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
 
 export default function ProductNotFoundAdmin() {
 	return (
-		<div className="py-16 text-center">
-			<h1 className="text-xl font-semibold">Ürün bulunamadı</h1>
-			<p className="mt-2 text-muted-foreground">
-				Bu id&apos;ye ait bir ürün yok — silinmiş ya da hiç var olmamış
-				olabilir.
-			</p>
-			<Button className="mt-4">
-				<Link href="/admin/urunler">Ürünlere Dön</Link>
-			</Button>
+		<div className="flex min-h-[50vh] items-center justify-center py-16">
+			<EmptyState
+				icon={BookOpenIcon}
+				title="Ürün bulunamadı"
+				description="Bu id'ye ait bir ürün yok — silinmiş ya da hiç var olmamış olabilir."
+				action={
+					<Button
+						render={<Link href="/admin/urunler" />}
+						nativeButton={false}
+					>
+						Ürünlere Dön
+					</Button>
+				}
+			/>
 		</div>
 	);
 }

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
+import { PackageIcon, PencilIcon, PlusIcon, RotateCcwIcon, SearchIcon, TrashIcon, XIcon } from "lucide-react";
 import {
 	useAdminProducts,
 	useUpdateStock,
@@ -10,9 +11,18 @@ import {
 	useRestoreProduct,
 	useBulkUpdatePrice,
 } from "@/hooks/use-admin-products";
+import { PageHeader } from "@/components/admin/page-header";
+import { RowAction, RowActions } from "@/components/admin/row-actions";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { NativeSelect } from "@/components/ui/native-select";
+import { Price } from "@/components/ui/price";
+import { Pagination } from "@/components/ui/pagination";
+import { TableSkeleton } from "@/components/ui/data-state";
+import { EmptyState } from "@/components/ui/empty-state";
 import {
 	Table,
 	TableBody,
@@ -21,8 +31,13 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
-import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/components/ui/toast";
+
+const SORT_OPTIONS: { value: string; label: string }[] = [
+	{ value: "newest", label: "En Yeni" },
+	{ value: "name", label: "İsme Göre" },
+	{ value: "price", label: "Fiyata Göre" },
+];
 
 export default function AdminProductsPage() {
 	const router = useRouter();
@@ -131,45 +146,77 @@ export default function AdminProductsPage() {
 	}
 
 	return (
-		<div>
-			<div className="mb-6 flex items-center justify-between">
-				<h1 className="text-xl font-semibold">Ürünler</h1>
-				<Button>
-					<Link href="/admin/urunler/yeni">Yeni Ürün</Link>
-				</Button>
-			</div>
+		<div className="space-y-6">
+			<PageHeader
+				title="Ürünler"
+				description={data ? `${data.totalCount} ürün` : undefined}
+				actions={
+					<Button render={<Link href="/admin/urunler/yeni" />} nativeButton={false}>
+						<PlusIcon />
+						Yeni Ürün
+					</Button>
+				}
+			/>
 
-			<div className="mb-4 flex gap-2">
-				<Input
-					placeholder="Ad veya SKU ara…"
-					value={searchValue}
-					onChange={(e) => {
-						setSearchValue(e.target.value);
-						setParam("q", e.target.value || null);
-					}}
-				/>
+			<Card size="sm" className="flex-row flex-wrap items-center gap-3">
+				<div className="relative max-w-sm flex-1">
+					<SearchIcon className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+					<Input
+						placeholder="Ad veya SKU ara…"
+						value={searchValue}
+						className="pl-9"
+						onChange={(e) => {
+							setSearchValue(e.target.value);
+							setParam("q", e.target.value || null);
+						}}
+					/>
+					{searchValue ? (
+						<button
+							type="button"
+							aria-label="Aramayı temizle"
+							className="absolute top-1/2 right-2.5 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+							onClick={() => {
+								setSearchValue("");
+								setParam("q", null);
+							}}
+						>
+							<XIcon className="size-4" />
+						</button>
+					) : null}
+				</div>
+
 				<label className="flex items-center gap-2 text-sm whitespace-nowrap">
-					<input
-						type="checkbox"
+					<Checkbox
 						checked={includeDeleted}
-						onChange={(e) =>
-							setParam(
-								"includeDeleted",
-								e.target.checked ? "true" : null,
-							)
+						onCheckedChange={(checked) =>
+							setParam("includeDeleted", checked ? "true" : null)
 						}
 					/>
 					Silinenleri de göster
 				</label>
-			</div>
+
+				<NativeSelect
+					className="w-auto"
+					value={sortBy}
+					onChange={(e) => setParam("sortBy", e.target.value)}
+				>
+					{SORT_OPTIONS.map((option) => (
+						<option key={option.value} value={option.value}>
+							{option.label}
+						</option>
+					))}
+				</NativeSelect>
+			</Card>
 
 			{selectedIds.size > 0 ? (
-				<div className="mb-4 flex items-center gap-2 rounded-md border bg-muted/30 p-3 text-sm">
-					<span>{selectedIds.size} ürün seçili</span>
+				<div className="flex flex-wrap items-center gap-3 rounded-xl border bg-primary-soft px-4 py-3 text-primary">
+					<span className="text-sm font-medium">
+						{selectedIds.size} ürün seçili
+					</span>
 					<Input
 						type="number"
 						placeholder="% artış (negatif = indirim)"
-						className="w-56"
+						className="w-56 bg-background"
 						value={bulkPercentage}
 						onChange={(e) => setBulkPercentage(e.target.value)}
 					/>
@@ -190,197 +237,207 @@ export default function AdminProductsPage() {
 				</div>
 			) : null}
 
-			{isLoading ? (
-				<Skeleton className="h-64 w-full" />
-			) : (
-				<Table>
-					<TableHeader>
-						<TableRow>
-							<TableHead className="w-8">
-								<input
-									type="checkbox"
-									aria-label="Tümünü seç"
-									checked={
-										!!data?.items.length &&
-										data.items.every((p) =>
-											selectedIds.has(p.id as number),
-										)
-									}
-									onChange={(e) =>
-										setSelectedIds(
-											e.target.checked
-												? new Set(
-														data?.items.map(
-															(p) => p.id as number,
-														),
-													)
-												: new Set(),
-										)
-									}
-								/>
-							</TableHead>
-							<TableHead>Ad</TableHead>
-							<TableHead>SKU</TableHead>
-							<TableHead>Fiyat</TableHead>
-							<TableHead>Stok</TableHead>
-							<TableHead>Durum</TableHead>
-							<TableHead className="text-right">
-								İşlemler
-							</TableHead>
-						</TableRow>
-					</TableHeader>
-					<TableBody>
-						{data?.items.map((product) => (
-							<TableRow key={product.id as number}>
-								<TableCell>
-									<input
-										type="checkbox"
-										aria-label={`${product.name} seç`}
-										checked={selectedIds.has(product.id as number)}
-										onChange={() =>
-											toggleSelected(product.id as number)
+			<Card className="overflow-hidden p-0">
+				{isLoading ? (
+					<TableSkeleton rows={10} cols={7} />
+				) : !data || data.items.length === 0 ? (
+					<EmptyState
+						icon={PackageIcon}
+						title="Ürün bulunamadı"
+						description="Arama kriterlerine uyan ürün yok."
+					/>
+				) : (
+					<Table>
+						<TableHeader className="bg-muted/50">
+							<TableRow className="hover:bg-transparent">
+								<TableHead className="w-8">
+									<Checkbox
+										aria-label="Tümünü seç"
+										checked={
+											!!data.items.length &&
+											data.items.every((p) =>
+												selectedIds.has(p.id as number),
+											)
+										}
+										onCheckedChange={(checked) =>
+											setSelectedIds(
+												checked
+													? new Set(
+															data.items.map(
+																(p) => p.id as number,
+															),
+														)
+													: new Set(),
+											)
 										}
 									/>
-								</TableCell>
-								<TableCell>{product.name}</TableCell>
-								<TableCell className="text-muted-foreground">
-									{product.sku ?? "—"}
-								</TableCell>
-								<TableCell>
-									{product.discountedPrice ?? product.price} ₺
-								</TableCell>
-								<TableCell>
-									{editingStock?.id ===
-									(product.id as number) ? (
-										<Input
-											type="number"
-											autoFocus
-											className="w-20"
-											value={editingStock.value}
-											onChange={(e) =>
-												setEditingStock({
-													id: product.id as number,
-													value: e.target.value,
-												})
-											}
-											onBlur={() => {
-												const stock = Number(
-													editingStock.value,
-												);
-												if (
-													!Number.isNaN(stock) &&
-													stock >= 0 &&
-													stock !== product.stock
-												) {
-													updateStock.mutate({
-														id: product.id as number,
-														stock,
-													});
-												}
-												setEditingStock(null);
-											}}
-											onKeyDown={(e) =>
-												e.key === "Enter" &&
-												e.currentTarget.blur()
-											}
-										/>
-									) : (
-										<button
-											className="underline decoration-dotted"
-											onClick={() =>
-												setEditingStock({
-													id: product.id as number,
-													value: String(
-														product.stock,
-													),
-												})
-											}
-										>
-											{product.stock}
-										</button>
-									)}
-								</TableCell>
-								<TableCell>
-									{product.deletedAt ? (
-										<Badge variant="destructive">
-											Silindi
-										</Badge>
-									) : product.isActive ? (
-										<Badge>Aktif</Badge>
-									) : (
-										<Badge variant="secondary">Pasif</Badge>
-									)}
-								</TableCell>
-								<TableCell className="text-right space-x-2">
-									<Button variant="ghost" size="sm">
-										<Link
-											href={`/admin/urunler/${product.id as number}`}
-										>
-											Düzenle
-										</Link>
-									</Button>
-									{product.deletedAt ? (
-										<Button
-											variant="ghost"
-											size="sm"
-											onClick={() =>
-												restoreProduct.mutate(
-													product.id as number,
-												)
-											}
-										>
-											Geri Al
-										</Button>
-									) : (
-										<Button
-											variant="ghost"
-											size="sm"
-											onClick={() => {
-												if (
-													confirm(
-														`"${product.name}" silinsin mi?`,
-													)
-												)
-													deleteProduct.mutate(
-														product.id as number,
-													);
-											}}
-										>
-											Sil
-										</Button>
-									)}
-								</TableCell>
+								</TableHead>
+								<TableHead>Ad</TableHead>
+								<TableHead>SKU</TableHead>
+								<TableHead>Fiyat</TableHead>
+								<TableHead>Stok</TableHead>
+								<TableHead>Durum</TableHead>
+								<TableHead className="text-right">
+									İşlemler
+								</TableHead>
 							</TableRow>
-						))}
-					</TableBody>
-				</Table>
-			)}
+						</TableHeader>
+						<TableBody>
+							{data.items.map((product) => {
+								const stock = Number(product.stock);
+								return (
+									<TableRow key={product.id as number} className="group/row">
+										<TableCell>
+											<Checkbox
+												aria-label={`${product.name} seç`}
+												checked={selectedIds.has(product.id as number)}
+												onCheckedChange={() =>
+													toggleSelected(product.id as number)
+												}
+											/>
+										</TableCell>
+										<TableCell>
+											<p className="font-medium">{product.name}</p>
+											<p className="text-xs text-muted-foreground">
+												{product.slug}
+											</p>
+										</TableCell>
+										<TableCell className="text-muted-foreground">
+											{product.sku ?? "—"}
+										</TableCell>
+										<TableCell>
+											<Price
+												size="sm"
+												price={Number(product.price)}
+												discountedPrice={
+													product.discountedPrice != null
+														? Number(product.discountedPrice)
+														: null
+												}
+											/>
+										</TableCell>
+										<TableCell>
+											{editingStock?.id ===
+											(product.id as number) ? (
+												<Input
+													type="number"
+													autoFocus
+													className="h-8 w-20"
+													value={editingStock.value}
+													onChange={(e) =>
+														setEditingStock({
+															id: product.id as number,
+															value: e.target.value,
+														})
+													}
+													onBlur={() => {
+														const next = Number(
+															editingStock.value,
+														);
+														if (
+															!Number.isNaN(next) &&
+															next >= 0 &&
+															next !== stock
+														) {
+															updateStock.mutate({
+																id: product.id as number,
+																stock: next,
+															});
+														}
+														setEditingStock(null);
+													}}
+													onKeyDown={(e) =>
+														e.key === "Enter" &&
+														e.currentTarget.blur()
+													}
+												/>
+											) : (
+												<Button
+													variant="ghost"
+													size="sm"
+													className={
+														stock === 0
+															? "gap-1 tabular-nums text-destructive"
+															: stock < 10
+																? "gap-1 tabular-nums text-warning"
+																: "gap-1 tabular-nums"
+													}
+													onClick={() =>
+														setEditingStock({
+															id: product.id as number,
+															value: String(stock),
+														})
+													}
+												>
+													{stock}
+													<PencilIcon className="size-3 opacity-0 transition-opacity group-hover/row:opacity-60" />
+												</Button>
+											)}
+										</TableCell>
+										<TableCell>
+											{product.deletedAt ? (
+												<Badge variant="destructive">
+													Silindi
+												</Badge>
+											) : product.isActive ? (
+												<Badge variant="success">Aktif</Badge>
+											) : (
+												<Badge variant="secondary">Pasif</Badge>
+											)}
+										</TableCell>
+										<TableCell className="text-right">
+											<RowActions>
+												<RowAction
+													icon={PencilIcon}
+													label="Düzenle"
+													href={`/admin/urunler/${product.id as number}`}
+												/>
+												{product.deletedAt ? (
+													<RowAction
+														icon={RotateCcwIcon}
+														label="Geri Al"
+														onClick={() =>
+															restoreProduct.mutate(
+																product.id as number,
+															)
+														}
+													/>
+												) : (
+													<RowAction
+														icon={TrashIcon}
+														label="Sil"
+														tone="danger"
+														confirm={{
+															title: `"${product.name}" silinsin mi?`,
+															description:
+																"Ürün listede pasif görünecek, geri alınabilir.",
+															confirmLabel: "Sil",
+														}}
+														onClick={() =>
+															deleteProduct.mutate(
+																product.id as number,
+															)
+														}
+													/>
+												)}
+											</RowActions>
+										</TableCell>
+									</TableRow>
+								);
+							})}
+						</TableBody>
+					</Table>
+				)}
+			</Card>
 
 			{data ? (
-				<div className="mt-4 flex items-center justify-between text-sm text-muted-foreground">
-					<span>
-						Toplam {data.totalCount} ürün — sayfa {data.page}/
-						{data.totalPages}
-					</span>
-					<div className="space-x-2">
-						<Button
-							variant="outline"
-							size="sm"
-							disabled={!data.hasPrevious}
-							onClick={() => setParam("page", String(page - 1))}
-						>
-							Önceki
-						</Button>
-						<Button
-							variant="outline"
-							size="sm"
-							disabled={!data.hasNext}
-							onClick={() => setParam("page", String(page + 1))}
-						>
-							Sonraki
-						</Button>
-					</div>
-				</div>
+				<Pagination
+					page={page}
+					totalPages={Number(data.totalPages ?? 1)}
+					hasPrevious={!!data.hasPrevious}
+					hasNext={!!data.hasNext}
+					onPageChange={(target) => setParam("page", String(target))}
+				/>
 			) : null}
 		</div>
 	);

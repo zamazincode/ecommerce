@@ -3,15 +3,18 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useState } from "react";
+import Link from "next/link";
+import { MailCheckIcon } from "lucide-react";
 import { apiFetch } from "@/lib/api/client";
 import {
 	forgotPasswordSchema,
 	type ForgotPasswordInput,
 } from "@/lib/validations/auth";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { FormField } from "@/components/ui/form-field";
 import { toast } from "@/components/ui/toast";
+import Logo from "@/components/common/logo";
 
 export default function ForgotPasswordPage() {
 	const [sent, setSent] = useState(false);
@@ -41,37 +44,54 @@ export default function ForgotPasswordPage() {
 
 	if (sent) {
 		return (
-			<main className="container-x py-16 text-center">
-				<h1 className="text-xl font-semibold">E-postanı kontrol et</h1>
-				<p className="mt-2 text-muted-foreground">
-					Kayıtlıysa, şifre sıfırlama bağlantısını içeren bir e-posta
-					gönderdik.
+			<div className="w-full max-w-md rounded-2xl border bg-card p-8 text-center shadow-card">
+				<div className="mx-auto mb-4 grid size-14 place-items-center rounded-full bg-success-soft text-success">
+					<MailCheckIcon className="size-7" />
+				</div>
+				<h1 className="text-lg font-semibold">
+					E-postanı kontrol et
+				</h1>
+				<p className="mt-2 text-sm text-muted-foreground">
+					Kayıtlıysa, şifre sıfırlama bağlantısını içeren bir
+					e-posta gönderdik.
 				</p>
-			</main>
+				<Link
+					href="/giris"
+					className="mt-6 inline-block text-sm font-medium text-primary hover:underline"
+				>
+					Girişe dön
+				</Link>
+			</div>
 		);
 	}
 
 	return (
-		<main className="container-x flex min-h-[60vh] items-center justify-center py-16">
-			<form
-				onSubmit={handleSubmit(onSubmit)}
-				className="w-full max-w-sm space-y-4"
-			>
-				<h1 className="text-xl font-semibold">Şifremi Unuttum</h1>
-				<div className="space-y-2">
-					<Label htmlFor="email">E-posta</Label>
+		<div className="w-full max-w-md rounded-2xl border bg-card p-8 shadow-card">
+			<Link href="/" className="mb-6 flex justify-center">
+				<Logo />
+			</Link>
+
+			<div className="mb-6 text-center">
+				<h1 className="text-lg font-semibold">Şifremi Unuttum</h1>
+				<p className="mt-2 text-sm text-muted-foreground">
+					E-posta adresini gir, sana bir sıfırlama bağlantısı
+					gönderelim.
+				</p>
+			</div>
+
+			<form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+				<FormField
+					label="E-posta"
+					htmlFor="email"
+					error={errors.email?.message}
+				>
 					<Input
 						id="email"
 						type="email"
 						{...register("email")}
 						placeholder="Eposta Adresi"
 					/>
-					{errors.email ? (
-						<p className="text-sm text-destructive">
-							{errors.email.message}
-						</p>
-					) : null}
-				</div>
+				</FormField>
 				<Button
 					type="submit"
 					className="w-full"
@@ -82,6 +102,6 @@ export default function ForgotPasswordPage() {
 						: "Sıfırlama Bağlantısı Gönder"}
 				</Button>
 			</form>
-		</main>
+		</div>
 	);
 }

@@ -1,10 +1,14 @@
 "use client";
 
+import { MapPinIcon } from "lucide-react";
 import { useAddresses, useDeleteAddress } from "@/hooks/use-addresses";
 import { AddressFormDialog } from "@/components/account/address-form-dialog";
+import { PageHeader } from "@/components/admin/page-header";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { EmptyState } from "@/components/ui/empty-state";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 export default function AddressesPage() {
 	const { data: addresses, isLoading } = useAddresses();
@@ -12,24 +16,38 @@ export default function AddressesPage() {
 
 	return (
 		<div>
-			<div className="mb-6 flex items-center justify-between">
-				<h1 className="text-xl font-semibold">Adreslerim</h1>
-				<AddressFormDialog trigger={<Button>Yeni Adres</Button>} />
-			</div>
+			<PageHeader
+				title="Adreslerim"
+				className="mb-6"
+				actions={
+					<AddressFormDialog trigger={<Button>Yeni Adres</Button>} />
+				}
+			/>
 
 			{isLoading ? null : addresses?.length === 0 ? (
-				<p className="text-sm text-muted-foreground">
-					Henüz kayıtlı adresin yok — sipariş verebilmek için en az
-					bir adres eklemelisin.
-				</p>
+				<EmptyState
+					icon={MapPinIcon}
+					title="Henüz kayıtlı adresin yok"
+					description="Sipariş verebilmek için en az bir adres eklemelisin."
+					action={
+						<AddressFormDialog
+							trigger={<Button>Adres Ekle</Button>}
+						/>
+					}
+				/>
 			) : (
 				<div className="grid gap-4 sm:grid-cols-2">
 					{addresses?.map((address) => (
 						<Card key={address.id} className="p-4">
 							<div className="mb-2 flex items-center justify-between">
-								<p className="font-medium">{address.title}</p>
+								<p className="flex items-center gap-1.5 font-medium">
+									<MapPinIcon className="size-4 text-muted-foreground" />
+									{address.title}
+								</p>
 								{address.isDefault ? (
-									<Badge>Varsayılan</Badge>
+									<Badge variant="brand-soft">
+										Varsayılan
+									</Badge>
 								) : null}
 							</div>
 							<p className="text-sm text-muted-foreground">
@@ -43,27 +61,30 @@ export default function AddressesPage() {
 								<AddressFormDialog
 									address={address}
 									trigger={
-										<Button variant="ghost" size="sm">
+										<Button variant="outline" size="sm">
 											Düzenle
 										</Button>
 									}
 								/>
-								<Button
-									variant="ghost"
-									size="sm"
-									onClick={() => {
-										if (
-											confirm(
-												`"${address.title}" adresi silinsin mi?`,
-											)
+								<ConfirmDialog
+									trigger={
+										<Button
+											variant="destructive"
+											size="sm"
+										>
+											Sil
+										</Button>
+									}
+									title={`"${address.title}" adresi silinsin mi?`}
+									description="Bu işlem geri alınamaz."
+									confirmLabel="Sil"
+									tone="danger"
+									onConfirm={() =>
+										deleteAddress.mutate(
+											address.id as number,
 										)
-											deleteAddress.mutate(
-												address.id as number,
-											);
-									}}
-								>
-									Sil
-								</Button>
+									}
+								/>
 							</div>
 						</Card>
 					))}

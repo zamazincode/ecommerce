@@ -1,8 +1,11 @@
 "use client";
 
 import { useEffect } from "react";
+import Link from "next/link";
+import { AlertCircleIcon } from "lucide-react";
 import { AdminSidebar } from "@/components/admin/sidebar";
 import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
 
 export default function AdminError({
 	error,
@@ -16,17 +19,25 @@ export default function AdminError({
 	}, [error]);
 
 	return (
-		<div className="flex min-h-screen">
+		<div className="flex min-h-screen bg-surface">
 			<AdminSidebar />
-			<main className="container-x flex flex-1 flex-col items-center justify-center py-24 text-center">
-				<h1 className="text-xl font-semibold">Bir şeyler ters gitti</h1>
-				<p className="mt-2 text-muted-foreground">
-					Sayfa yüklenirken bir hata oluştu. Tekrar dene ya da başka bir
-					bölüme geç.
-				</p>
-				<Button className="mt-4" onClick={() => reset()}>
-					Tekrar Dene
-				</Button>
+			<main className="flex flex-1 items-center justify-center px-4 py-6 sm:px-6 lg:px-8">
+				<EmptyState
+					icon={AlertCircleIcon}
+					tone="danger"
+					title="Bir şeyler ters gitti"
+					description="Sayfa yüklenirken bir hata oluştu. Tekrar dene ya da başka bir bölüme geç."
+					action={
+						<div className="flex items-center justify-center gap-2">
+							<Button variant="outline" onClick={() => reset()}>
+								Tekrar Dene
+							</Button>
+							<Button render={<Link href="/admin" />} nativeButton={false}>
+								Dashboard&apos;a Dön
+							</Button>
+						</div>
+					}
+				/>
 			</main>
 		</div>
 	);

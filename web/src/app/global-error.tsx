@@ -2,6 +2,8 @@
 
 import "./globals.css";
 import { useEffect } from "react";
+import { AlertCircleIcon } from "lucide-react";
+import { EmptyState } from "@/components/ui/empty-state";
 
 export default function GlobalError({
 	error,
@@ -16,19 +18,22 @@ export default function GlobalError({
 
 	return (
 		<html lang="tr">
-			<body className="flex min-h-screen items-center justify-center">
-				<div className="text-center">
-					<h1 className="text-xl font-semibold">Uygulama çöktü</h1>
-					<p className="mt-2 text-muted-foreground">
-						Beklenmeyen bir hata oluştu. Sayfayı yenilemeyi dene.
-					</p>
-					<button
-						className="mt-4 rounded-md border px-4 py-2 text-sm"
-						onClick={() => reset()}
-					>
-						Tekrar Dene
-					</button>
-				</div>
+			<body className="grid min-h-screen place-items-center px-4">
+				<EmptyState
+					icon={AlertCircleIcon}
+					tone="danger"
+					title="Uygulama çöktü"
+					description="Beklenmeyen bir hata oluştu. Sayfayı yenilemeyi dene."
+					action={
+						<button
+							type="button"
+							className="rounded-md border px-4 py-2 text-sm hover:bg-muted"
+							onClick={() => reset()}
+						>
+							Tekrar Dene
+						</button>
+					}
+				/>
 			</body>
 		</html>
 	);

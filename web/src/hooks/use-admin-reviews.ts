@@ -3,17 +3,18 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api/client";
 import { queryKeys } from "@/lib/api/query-keys";
+import type { AdminReviewFilters } from "@/types";
 import type { components } from "@/types/api";
 
 type PagedResultOfAdminReviewDto =
 	components["schemas"]["PagedResultOfAdminReviewDto"];
 
-export function useAdminReviews(onlyPending: boolean) {
+export function useAdminReviews({ onlyPending, page }: AdminReviewFilters) {
 	return useQuery({
-		queryKey: queryKeys.adminReviews({ onlyPending }),
+		queryKey: queryKeys.adminReviews({ onlyPending, page }),
 		queryFn: () =>
 			apiFetch<PagedResultOfAdminReviewDto>(
-				`admin/reviews?onlyPending=${onlyPending}`,
+				`admin/reviews?onlyPending=${onlyPending}${page ? `&page=${page}` : ""}`,
 			),
 	});
 }

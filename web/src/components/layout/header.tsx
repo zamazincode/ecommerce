@@ -1,31 +1,41 @@
 import Link from "next/link";
 import Logo from "../common/logo";
-import { AccountMenu } from "./account-menu";
-import { SearchBar } from "./search-bar";
+import { serverApiFetch } from "@/lib/api/server";
+import { AnnouncementBar } from "./announcement-bar";
 import { CategoryNav } from "./category-nav";
-import { CartButton } from "@/components/cart/cart-button";
+import { HeaderActions } from "./header-actions";
+import { MobileMenu, MobileMenuButton } from "./mobile-menu";
+import { SearchBar } from "./search-bar";
+import type { components } from "@/types/api";
 
-export default function Header() {
+type CategoryTreeDto = components["schemas"]["CategoryTreeDto"];
+
+export default async function Header() {
+	const categories =
+		(await serverApiFetch<CategoryTreeDto[]>("categories/tree")) ?? [];
+
 	return (
-		<div className="border-b">
-			<header className="container-x">
-				<div className="flex items-end justify-between gap-4 py-2 text-xs text-muted-foreground">
-					<Link href="/yardim" className="hover:underline">
-						Yardım
-					</Link>
-					<AccountMenu />
-				</div>
-
-				<div className="flex items-center justify-between gap-12 py-4">
-					<Link href="/">
+		<>
+			<AnnouncementBar />
+			<header className="sticky top-0 z-40 border-b bg-background pt-2.5">
+				<div className="container-x flex h-16 items-center gap-3 lg:gap-6">
+					<MobileMenuButton />
+					<Link href="/" className="shrink-0">
 						<Logo />
 					</Link>
-					<SearchBar />
-					<CartButton />
+					<div className="mx-auto hidden max-w-2xl flex-1 md:block">
+						<SearchBar />
+					</div>
+					<HeaderActions />
 				</div>
-
 				<CategoryNav />
 			</header>
-		</div>
+			<div className="border-b bg-background md:hidden">
+				<div className="container-x py-2.5">
+					<SearchBar />
+				</div>
+			</div>
+			<MobileMenu categories={categories} />
+		</>
 	);
 }

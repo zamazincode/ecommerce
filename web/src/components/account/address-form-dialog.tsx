@@ -1,16 +1,20 @@
 "use client";
 
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
 	Dialog,
+	DialogClose,
 	DialogContent,
+	DialogFooter,
 	DialogHeader,
 	DialogTitle,
 	DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { FormField } from "@/components/ui/form-field";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/toast";
@@ -30,6 +34,7 @@ export function AddressFormDialog({
 	address?: AddressDto;
 	trigger: React.ReactNode;
 }) {
+	const [open, setOpen] = useState(false);
 	const isEdit = !!address;
 	const create = useCreateAddress();
 	const update = useUpdateAddress();
@@ -37,6 +42,7 @@ export function AddressFormDialog({
 	const {
 		register,
 		handleSubmit,
+		reset,
 		formState: { errors, isSubmitting },
 	} = useForm<AddressFormInput>({
 		resolver: zodResolver(addressFormSchema),
@@ -52,88 +58,73 @@ export function AddressFormDialog({
 				title: isEdit ? "Adres güncellendi" : "Adres eklendi",
 				type: "success",
 			});
+			setOpen(false);
+			reset();
 		} catch {
 			toast.add({ title: "Adres kaydedilemedi", type: "error" });
 		}
 	}
 
 	return (
-		<Dialog>
+		<Dialog open={open} onOpenChange={setOpen}>
 			<DialogTrigger render={trigger as React.ReactElement} />
-			<DialogContent>
+			<DialogContent className="sm:max-w-lg">
 				<DialogHeader>
 					<DialogTitle>
 						{isEdit ? "Adresi Düzenle" : "Yeni Adres"}
 					</DialogTitle>
 				</DialogHeader>
 				<form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-					<div>
-						<Label htmlFor="title">Başlık</Label>
-						<Input
-							id="title"
-							placeholder="Ev, İş…"
-							{...register("title")}
-						/>
-						{errors.title ? (
-							<p className="text-sm text-destructive">
-								{errors.title.message}
-							</p>
-						) : null}
-					</div>
-					<div>
-						<Label htmlFor="fullName">Ad Soyad</Label>
+					<FormField label="Başlık" htmlFor="title" error={errors.title?.message}>
+						<Input id="title" placeholder="Ev, İş…" {...register("title")} />
+					</FormField>
+
+					<FormField
+						label="Ad Soyad"
+						htmlFor="fullName"
+						error={errors.fullName?.message}
+					>
 						<Input id="fullName" {...register("fullName")} />
-						{errors.fullName ? (
-							<p className="text-sm text-destructive">
-								{errors.fullName.message}
-							</p>
-						) : null}
-					</div>
-					<div>
-						<Label htmlFor="phone">Telefon</Label>
+					</FormField>
+
+					<FormField label="Telefon" htmlFor="phone" error={errors.phone?.message}>
 						<Input id="phone" {...register("phone")} />
-						{errors.phone ? (
-							<p className="text-sm text-destructive">
-								{errors.phone.message}
-							</p>
-						) : null}
-					</div>
+					</FormField>
+
 					<div className="grid grid-cols-2 gap-4">
-						<div>
-							<Label htmlFor="city">İl</Label>
+						<FormField label="İl" htmlFor="city" error={errors.city?.message}>
 							<Input id="city" {...register("city")} />
-							{errors.city ? (
-								<p className="text-sm text-destructive">
-									{errors.city.message}
-								</p>
-							) : null}
-						</div>
-						<div>
-							<Label htmlFor="district">İlçe</Label>
+						</FormField>
+						<FormField
+							label="İlçe"
+							htmlFor="district"
+							error={errors.district?.message}
+						>
 							<Input id="district" {...register("district")} />
-							{errors.district ? (
-								<p className="text-sm text-destructive">
-									{errors.district.message}
-								</p>
-							) : null}
-						</div>
+						</FormField>
 					</div>
-					<div>
-						<Label htmlFor="fullAddress">Açık Adres</Label>
+
+					<FormField
+						label="Açık Adres"
+						htmlFor="fullAddress"
+						error={errors.fullAddress?.message}
+					>
 						<Input id="fullAddress" {...register("fullAddress")} />
-						{errors.fullAddress ? (
-							<p className="text-sm text-destructive">
-								{errors.fullAddress.message}
-							</p>
-						) : null}
-					</div>
+					</FormField>
+
 					<div className="flex items-center gap-2">
 						<Switch id="isDefault" {...register("isDefault")} />
 						<Label htmlFor="isDefault">Varsayılan adres yap</Label>
 					</div>
-					<Button type="submit" disabled={isSubmitting}>
-						{isEdit ? "Güncelle" : "Ekle"}
-					</Button>
+
+					<DialogFooter>
+						<DialogClose render={<Button type="button" variant="outline" />}>
+							İptal
+						</DialogClose>
+						<Button type="submit" disabled={isSubmitting}>
+							{isEdit ? "Güncelle" : "Ekle"}
+						</Button>
+					</DialogFooter>
 				</form>
 			</DialogContent>
 		</Dialog>

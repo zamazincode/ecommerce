@@ -1,39 +1,73 @@
-import { getHome } from "@/lib/api/catalog";
-import { ProductCard } from "@/components/product/product-card";
+import { getHome, getCategoryTree } from "@/lib/api/catalog";
+import { HeroSlider } from "@/components/home/hero-slider";
+import { PromoBanners } from "@/components/home/promo-banners";
+// import { CollectionTiles } from "@/components/home/collection-tiles";
+import { CategoryStrip } from "@/components/layout/category-strip";
+import { ProductCarousel } from "@/components/product/product-carousel";
+// import { SectionHeading } from "@/components/ui/section-heading";
+import { Badge } from "@/components/ui/badge";
 
 export const revalidate = 60;
 
 export default async function HomePage() {
-	const home = await getHome();
+	const [home, tree] = await Promise.all([getHome(), getCategoryTree()]);
 
 	return (
-		<main className="container-x space-y-10 py-8">
-			<section>
-				<h2 className="mb-4 text-lg font-semibold">Çok Satanlar</h2>
-				<div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
-					{home.bestsellers.map((product) => (
-						<ProductCard key={product.id} product={product} />
-					))}
-				</div>
-			</section>
+		<div className="space-y-12 py-8 md:space-y-16">
+			<HeroSlider covers={home.bestsellers} />
 
-			<section>
-				<h2 className="mb-4 text-lg font-semibold">Yeni Gelenler</h2>
-				<div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
-					{home.newArrivals.map((product) => (
-						<ProductCard key={product.id} product={product} />
-					))}
-				</div>
-			</section>
+			<CategoryStrip categories={tree} />
 
-			<section>
-				<h2 className="mb-4 text-lg font-semibold">İndirimdekiler</h2>
-				<div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
-					{home.discounted.map((product) => (
-						<ProductCard key={product.id} product={product} />
-					))}
+			<div className="container-x">
+				<PromoBanners />
+			</div>
+
+			{home.bestsellers.length > 0 ? (
+				<section className="section-band py-12">
+					<div className="container-x">
+						<ProductCarousel
+							title="Çok Satan Kitaplar"
+							href="/kategori/kitap"
+							products={home.bestsellers}
+						/>
+					</div>
+				</section>
+			) : null}
+
+			{home.discounted.length > 0 ? (
+				<div className="container-x">
+					<ProductCarousel
+						title="İndirimdekiler"
+						products={home.discounted}
+						badge={
+							<Badge variant="accent">
+								%&apos;ye varan indirim
+							</Badge>
+						}
+					/>
+				</div>
+			) : null}
+
+			{/*
+			<section className="section-band py-12">
+				<div className="container-x">
+					<SectionHeading
+						title="Senin İçin Seçtiklerimiz"
+						className="mb-4"
+					/>
+					<CollectionTiles categories={tree} />
 				</div>
 			</section>
-		</main>
+			*/}
+
+			{home.newArrivals.length > 0 ? (
+				<div className="container-x">
+					<ProductCarousel
+						title="Yeni Gelenler"
+						products={home.newArrivals}
+					/>
+				</div>
+			) : null}
+		</div>
 	);
 }

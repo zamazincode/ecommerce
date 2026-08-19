@@ -1,15 +1,30 @@
 import type { Metadata } from "next";
-import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { CheckIcon, RotateCcwIcon, ShieldCheckIcon, TruckIcon, XIcon } from "lucide-react";
 import {
 	getProductBySlug,
 	getRelatedProducts,
+	getCategoryTree,
 } from "@/lib/api/catalog";
-import { formatPrice } from "@/lib/format";
+import { findCategoryPath } from "@/lib/category-path";
 import { toSafeJsonLd } from "@/lib/utils";
+import { BOOK_BINDING_LABELS } from "@/lib/enums";
+import { FREE_SHIPPING_THRESHOLD } from "@/lib/shipping";
 import { AddToCartButton } from "@/components/product/add-to-cart-button";
-import { ProductCard } from "@/components/product/product-card";
+import { FavoriteButton } from "@/components/product/favorite-button";
+import { ProductGallery } from "@/components/product/product-gallery";
+import { ProductCarousel } from "@/components/product/product-carousel";
+import { ExpandableDescription } from "@/components/product/expandable-description";
+import { Breadcrumb } from "@/components/common/breadcrumb";
+import { Price } from "@/components/ui/price";
+import {
+	Accordion,
+	AccordionItem,
+	AccordionTrigger,
+	AccordionContent,
+} from "@/components/ui/accordion";
+import { Separator } from "@/components/ui/separator";
 
 export const revalidate = 60;
 
@@ -61,7 +76,15 @@ export default async function ProductPage({ params }: { params: Params }) {
 
 	if (!product) notFound();
 
-	const related = await getRelatedProducts(product.id as number);
+	const [related, tree] = await Promise.all([
+		getRelatedProducts(product.id as number),
+		getCategoryTree(),
+	]);
+
+	const categoryPath = findCategoryPath(tree, product.category.slug) ?? [];
+	const price = product.price as number;
+	const discountedPrice = product.discountedPrice as number | null;
+	const stock = product.stock as number;
 
 	// Google shop listte çıkması için
 	const jsonLd = {
@@ -81,86 +104,182 @@ export default async function ProductPage({ params }: { params: Params }) {
 	};
 
 	return (
-		<main className="container-x grid gap-8 py-8 md:grid-cols-2">
+		<main className="container-x space-y-10 py-6">
 			{/* eslint-disable-next-line @next/next/no-script-component-in-head -- JSON-LD, çalıştırılabilir kod değil */}
 			<script
 				type="application/ld+json"
 				dangerouslySetInnerHTML={{ __html: toSafeJsonLd(jsonLd) }}
 			/>
 
-			<div className="relative aspect-2/3 w-full overflow-hidden rounded-lg bg-muted">
-				{product.imageUrls[0] ? (
-					<Image
-						src={product.imageUrls[0]}
-						alt={product.name}
-						fill
-						priority
-						sizes="(max-width: 768px) 100vw, 50vw"
-						className="object-cover"
+			<Breadcrumb
+				items={[
+					...categoryPath.map((c) => ({
+						label: c.name,
+						href: `/kategori/${c.slug}`,
+					})),
+					{ label: product.name },
+				]}
+			/>
+
+			<div className="grid gap-8 lg:grid-cols-[minmax(0,420px)_1fr_320px]">
+				<ProductGallery images={product.imageUrls} productName={product.name} />
+
+				<div>
+					<Link
+						href={`/kategori/${product.category.slug}`}
+						className="text-xs font-medium tracking-wide text-muted-foreground uppercase hover:text-primary"
+					>
+						{product.category.name}
+					</Link>
+					<h1 className="mt-1 font-heading text-2xl font-semibold md:text-3xl">
+						{product.name}
+					</h1>
+					{product.authors.length > 0 ? (
+						<p className="mt-2 text-muted-foreground">
+							{product.authors.map((author, i) => (
+								<span key={author.id}>
+									{i > 0 ? ", " : ""}
+									<Link
+										href={`/yazar/${author.slug}`}
+										className="text-primary hover:underline"
+									>
+										{author.name}
+									</Link>
+								</span>
+							))}
+						</p>
+					) : null}
+					{product.publisher || product.brand ? (
+						<p className="mt-1 text-sm text-muted-foreground">
+							{product.publisher ? (
+								<>
+									Yayınevi:{" "}
+									<span className="text-foreground">
+										{product.publisher.name}
+									</span>
+								</>
+							) : null}
+							{product.publisher && product.brand ? " · " : null}
+							{product.brand ? (
+								<>
+									Marka:{" "}
+									<span className="text-foreground">
+										{product.brand.name}
+									</span>
+								</>
+							) : null}
+						</p>
+					) : null}
+
+					<Separator className="my-6" />
+
+					<Accordion defaultValue={["info"]}>
+						<AccordionItem value="info">
+							<AccordionTrigger>Ürün Bilgileri</AccordionTrigger>
+							<AccordionContent className="space-y-4">
+								{product.bookDetail ? (
+									<dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+										{product.bookDetail.isbn ? (
+											<>
+												<dt className="text-muted-foreground">
+													ISBN
+												</dt>
+												<dd>{product.bookDetail.isbn}</dd>
+											</>
+										) : null}
+										{product.bookDetail.pageCount ? (
+											<>
+												<dt className="text-muted-foreground">
+													Sayfa Sayısı
+												</dt>
+												<dd>{product.bookDetail.pageCount}</dd>
+											</>
+										) : null}
+										{product.bookDetail.language ? (
+											<>
+												<dt className="text-muted-foreground">
+													Dil
+												</dt>
+												<dd>{product.bookDetail.language}</dd>
+											</>
+										) : null}
+										{product.bookDetail.publishedYear ? (
+											<>
+												<dt className="text-muted-foreground">
+													Basım Yılı
+												</dt>
+												<dd>{product.bookDetail.publishedYear}</dd>
+											</>
+										) : null}
+										<dt className="text-muted-foreground">
+											Cilt Tipi
+										</dt>
+										<dd>
+											{BOOK_BINDING_LABELS[product.bookDetail.binding]}
+										</dd>
+									</dl>
+								) : null}
+
+								{product.description ? (
+									<ExpandableDescription text={product.description} />
+								) : null}
+							</AccordionContent>
+						</AccordionItem>
+					</Accordion>
+				</div>
+
+				<div className="space-y-4 rounded-2xl border p-5 shadow-card lg:sticky lg:top-24">
+					<Price
+						price={price}
+						discountedPrice={discountedPrice}
+						size="lg"
+						showBadge
 					/>
-				) : null}
-			</div>
 
-			<div>
-				<h1 className="text-2xl font-semibold">{product.name}</h1>
-				{product.authors.length > 0 ? (
-					<p className="text-muted-foreground">
-						{product.authors.map((author, i) => (
-							<span key={author.id}>
-								{i > 0 ? ", " : ""}
-								<Link
-									href={`/yazar/${author.slug}`}
-									className="hover:underline"
-								>
-									{author.name}
-								</Link>
-							</span>
-						))}
+					<p
+						className={
+							product.inStock
+								? "flex items-center gap-1.5 text-sm text-success"
+								: "flex items-center gap-1.5 text-sm text-destructive"
+						}
+					>
+						{product.inStock ? (
+							<CheckIcon className="size-4" />
+						) : (
+							<XIcon className="size-4" />
+						)}
+						{product.inStock ? "Stokta var, hemen kargoda" : "Stokta yok"}
 					</p>
-				) : null}
 
-				<p className="mt-4 text-2xl font-bold">
-					{formatPrice(product.effectivePrice as number)}
-				</p>
-				{product.discountedPrice != null ? (
-					<p className="text-muted-foreground line-through">
-						{formatPrice(product.price as number)}
-					</p>
-				) : null}
-
-				<p className="mt-4 text-sm">
-					{product.inStock ? "Stokta var" : "Stokta yok"}
-				</p>
-
-				{product.description ? (
-					<p className="mt-6 whitespace-pre-line text-sm text-muted-foreground">
-						{product.description}
-					</p>
-				) : null}
-
-				<div className="mt-6">
 					<AddToCartButton
 						productId={product.id as number}
 						inStock={product.inStock}
+						stock={stock}
 					/>
+
+					<FavoriteButton
+						productId={product.id as number}
+						variant="expanded"
+					/>
+
+					<ul className="space-y-2 border-t pt-4 text-xs text-muted-foreground">
+						<li className="flex items-center gap-2">
+							<TruckIcon className="size-4" />
+							{FREE_SHIPPING_THRESHOLD} ₺ üzeri kargo bedava
+						</li>
+						<li className="flex items-center gap-2">
+							<RotateCcwIcon className="size-4" />
+							14 gün içinde iade
+						</li>
+						<li className="flex items-center gap-2">
+							<ShieldCheckIcon className="size-4" />
+							Güvenli ödeme
+						</li>
+					</ul>
 				</div>
 			</div>
 
-			{related.length > 0 ? (
-				// `md:col-span-2` ŞART — `main` iki kolonlu bir grid, bu
-				// olmadan bölüm ikinci kolonun altına sıkışıp yarım genişlikte
-				// görünürdü.
-				<section className="md:col-span-2 mt-4">
-					<h2 className="mb-4 text-lg font-semibold">
-						Benzer Ürünler
-					</h2>
-					<div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-8">
-						{related.map((product) => (
-							<ProductCard key={product.id} product={product} />
-						))}
-					</div>
-				</section>
-			) : null}
+			<ProductCarousel title="Benzer Ürünler" products={related} />
 		</main>
 	);
 }

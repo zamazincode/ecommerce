@@ -8,7 +8,7 @@ test("misafir: arama → sepete ekle → adres adımına geç", async ({ page })
 	await expect(page).toHaveURL(/\/urun\//);
 
 	await page.getByRole("button", { name: "Sepete Ekle" }).click();
-	await expect(page.getByText("1")).toBeVisible();
+	await expect(page.getByTestId("cart-count")).toHaveText("1");
 
 	await page
 		.getByRole("link", { name: /ödemeye geç|sepeti onayla/i })

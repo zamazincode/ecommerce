@@ -1,18 +1,25 @@
 "use client";
 
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
 import Link from "next/link";
+import {
+	AlertCircleIcon,
+	ArrowRightIcon,
+	EyeIcon,
+	EyeOffIcon,
+} from "lucide-react";
 import { loginSchema, type LoginInput } from "@/lib/validations/auth";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { FormField } from "@/components/ui/form-field";
+import { Separator } from "@/components/ui/separator";
 import { toast } from "@/components/ui/toast";
-import { ChevronRight } from "lucide-react";
 import { useMergeCart } from "@/hooks/use-cart";
+import Logo from "@/components/common/logo";
 
 export default function LoginPage() {
 	const router = useRouter();
@@ -21,6 +28,7 @@ export default function LoginPage() {
 	const mergeCart = useMergeCart();
 
 	const [serverError, setServerError] = useState<string | null>(null);
+	const [showPassword, setShowPassword] = useState(false);
 
 	const {
 		register,
@@ -62,78 +70,94 @@ export default function LoginPage() {
 	}
 
 	return (
-		<main className="container-x flex min-h-[60vh] items-center justify-center py-16">
-			<div className="max-w-xl w-fit border border-border flex flex-col items-center justify-center p-12 rounded-lg">
-				<div className="mb-6">
-					<h1 className="text-lg text-primary font-semibold text-center mb-2">
-						D&R Kültür, Sanat ve Eğlence Dünyası
-					</h1>
-					<h2 className="text-center text-sm">
-						Giriş yap ya da hemen üye ol; kültür, sanat ve eğlence
-						dolu alışveriş deneyimini keşfet.
-					</h2>
-				</div>
-				<form
-					onSubmit={handleSubmit(onSubmit)}
-					className="w-full space-y-4"
-				>
-					{serverError ? (
-						<p className="text-sm text-destructive">
-							{serverError}
-						</p>
-					) : null}
+		<div className="w-full max-w-md rounded-2xl border bg-card p-8 shadow-card">
+			<Link href="/" className="mb-6 flex justify-center">
+				<Logo />
+			</Link>
 
-					<div className="space-y-2">
-						<Label htmlFor="email">E-posta</Label>
-						<Input
-							id="email"
-							type="email"
-							{...register("email")}
-							placeholder="E-posta Adresi"
-						/>
-						{errors.email ? (
-							<p className="text-sm text-destructive">
-								{errors.email.message}
-							</p>
-						) : null}
-					</div>
-					<div className="space-y-2">
-						<Label htmlFor="password">Şifre</Label>
+			<div className="mb-6 text-center">
+				<h1 className="text-lg font-semibold text-primary">
+					D&R Kültür, Sanat ve Eğlence Dünyası
+				</h1>
+				<p className="mt-2 text-sm text-muted-foreground">
+					Giriş yap ya da hemen üye ol; kültür, sanat ve eğlence
+					dolu alışveriş deneyimini keşfet.
+				</p>
+			</div>
+
+			<form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+				{serverError ? (
+					<p className="flex items-center gap-2 rounded-lg bg-destructive/10 p-3 text-sm text-destructive">
+						<AlertCircleIcon className="size-4 shrink-0" />
+						{serverError}
+					</p>
+				) : null}
+
+				<FormField
+					label="E-posta"
+					htmlFor="email"
+					error={errors.email?.message}
+				>
+					<Input
+						id="email"
+						type="email"
+						{...register("email")}
+						placeholder="E-posta Adresi"
+					/>
+				</FormField>
+
+				<FormField
+					label="Şifre"
+					htmlFor="password"
+					error={errors.password?.message}
+				>
+					<div className="relative">
 						<Input
 							id="password"
-							type="password"
+							type={showPassword ? "text" : "password"}
 							{...register("password")}
 							placeholder="Şifre"
+							className="pr-10"
 						/>
-						{errors.password ? (
-							<p className="text-sm text-destructive">
-								{errors.password.message}
-							</p>
-						) : null}
-					</div>
-
-					<Button
-						type="submit"
-						className="w-full"
-						disabled={isSubmitting}
-					>
-						{isSubmitting ? "Giriş yapılıyor…" : "Giriş Yap"}
-						<ChevronRight className="text-white " />
-					</Button>
-
-					<div className="flex justify-between text-sm text-muted-foreground">
-						<Link href="/kayit" className="hover:underline">
-							Hesap oluştur
-						</Link>
-						<Link
-							href="/sifremi-unuttum"
-							className="hover:underline"
+						<Button
+							type="button"
+							variant="ghost"
+							size="icon-sm"
+							className="absolute top-1 right-1 bottom-1 h-auto text-muted-foreground"
+							onClick={() => setShowPassword((prev) => !prev)}
+							aria-label={
+								showPassword ? "Şifreyi gizle" : "Şifreyi göster"
+							}
 						>
-							Şifremi unuttum
-						</Link>
+							{showPassword ? <EyeOffIcon /> : <EyeIcon />}
+						</Button>
 					</div>
-				</form>
-			</div>
-		</main>
+				</FormField>
+
+				<Button type="submit" className="w-full" disabled={isSubmitting}>
+					{isSubmitting ? "Giriş yapılıyor…" : "Giriş Yap"}
+					<ArrowRightIcon />
+				</Button>
+
+				<Link
+					href="/sifremi-unuttum"
+					className="block text-center text-sm text-muted-foreground hover:underline"
+				>
+					Şifremi unuttum
+				</Link>
+			</form>
+
+			<Separator className="my-6" />
+
+			<p className="text-center text-sm text-muted-foreground">
+				Hesabın yok mu?{" "}
+				<Link
+					href="/kayit"
+					className="font-medium text-primary hover:underline"
+				>
+					Üye Ol
+				</Link>
+			</p>
+		</div>
 	);
 }
