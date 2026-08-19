@@ -33,6 +33,9 @@ public class Order : IAuditable
     /// ConfirmationEmailSentAt ile aynı desen — o Faz 1'de eklenmişti.
     public DateTime? ShippedEmailSentAt { get; set; }
 
+    /// Idempotency: iptal bildirimi iki kez gitmesin. Aynı desen.
+    public DateTime? CancelledEmailSentAt { get; set; }
+
     /// İstemcinin ürettiği tekil anahtar. Aynı anahtarla ikinci istek gelirse
     /// yeni sipariş oluşturmaz, mevcut olanı döndürür.
     public string? IdempotencyKey { get; set; }

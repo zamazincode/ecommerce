@@ -77,6 +77,10 @@ public class OrderNotificationJobsTests(DatabaseFixture fixture) : IntegrationTe
         => ExecuteScopedAsync(sp =>
             sp.GetRequiredService<OrderNotificationJobs>().SendShippedNotificationAsync(orderId));
 
+    private Task RunCancelledAsync(int orderId)
+        => ExecuteScopedAsync(sp =>
+            sp.GetRequiredService<OrderNotificationJobs>().SendCancelledNotificationAsync(orderId));
+
     [Fact]
     public async Task SendOrderConfirmation_SendsMailAndStampsSentAt()
     {
@@ -147,5 +151,38 @@ public class OrderNotificationJobsTests(DatabaseFixture fixture) : IntegrationTe
         var sentAt = await ExecuteDbAsync(db =>
             db.Orders.Where(o => o.OrderNumber == orderNumber).Select(o => o.ShippedEmailSentAt).FirstAsync(Ct));
         sentAt.ShouldNotBeNull();
+    }
+
+    [Fact]
+    public async Task SendCancelledNotification_SendsMailAndStampsSentAt()
+    {
+        await AuthenticateAsync();
+        var (orderNumber, orderId) = await CreatePendingOrderAsync();
+
+        await ExecuteDbAsync(async db =>
+            await db.Orders.Where(o => o.OrderNumber == orderNumber)
+                .ExecuteUpdateAsync(s => s.SetProperty(o => o.Status, OrderStatus.Cancelled), Ct));
+
+        await RunCancelledAsync(orderId);
+
+        Factory.EmailService.SentEmails.Count.ShouldBe(1);
+        Factory.EmailService.SentEmails.ShouldContain(e =>
+            e.To == "musteri@test.com" && e.Subject.Contains(orderNumber));
+
+        var sentAt = await ExecuteDbAsync(db =>
+            db.Orders.Where(o => o.OrderNumber == orderNumber).Select(o => o.CancelledEmailSentAt).FirstAsync(Ct));
+        sentAt.ShouldNotBeNull();
+    }
+
+    [Fact]
+    public async Task SendCancelledNotification_RunTwice_SendsOnlyOnce()
+    {
+        await AuthenticateAsync();
+        var (_, orderId) = await CreatePendingOrderAsync();
+
+        await RunCancelledAsync(orderId);
+        await RunCancelledAsync(orderId);
+
+        Factory.EmailService.SentEmails.Count.ShouldBe(1);
     }
 }

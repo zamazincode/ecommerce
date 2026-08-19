@@ -109,4 +109,46 @@ public sealed class OrderNotificationJobs(
         if (affected == 0)
             logger.LogWarning("Kargo bildirimi damgası yazılamadı. OrderId: {OrderId}", orderId);
     }
+
+    [AutomaticRetry(Attempts = 3)]
+    public async Task SendCancelledNotificationAsync(int orderId)
+    {
+        var order = await db.Orders.AsNoTracking()
+            .FirstOrDefaultAsync(o => o.Id == orderId);
+
+        if (order is null)
+        {
+            logger.LogWarning("Sipariş iptal maili: {OrderId} bulunamadı.", orderId);
+            return;
+        }
+
+        if (order.CancelledEmailSentAt is not null)
+        {
+            logger.LogInformation("Sipariş iptal maili zaten gönderilmiş: {OrderNumber}", order.OrderNumber);
+            return;
+        }
+
+        var user = await db.Users.AsNoTracking()
+            .Where(u => u.Id == order.UserId)
+            .Select(u => new { u.Email, u.FirstName })
+            .FirstOrDefaultAsync();
+
+        if (string.IsNullOrWhiteSpace(user?.Email))
+        {
+            logger.LogWarning("Sipariş iptal maili: {OrderNumber} için kullanıcı e-postası yok.", order.OrderNumber);
+            return;
+        }
+
+        var siparisUrl = $"{web.Value.BaseUrl}/hesabim/siparisler/{order.OrderNumber}";
+
+        await sender.SendCancelledAsync(user.Email, user.FirstName ?? "Müşteri", order.OrderNumber, siparisUrl);
+
+        var affected = await db.Orders
+            .Where(o => o.Id == orderId && o.CancelledEmailSentAt == null)
+            .ExecuteUpdateAsync(s => s.SetProperty(
+                o => o.CancelledEmailSentAt, clock.GetUtcNow().UtcDateTime));
+
+        if (affected == 0)
+            logger.LogWarning("İptal maili damgası yazılamadı. OrderId: {OrderId}", orderId);
+    }
 }

@@ -329,6 +329,9 @@ public sealed class OrderService(
 
         logger.LogInformation("Sipariş iptal edildi: {OrderNumber}", order.OrderNumber);
 
+        // Enqueue daima commit'ten SONRA (K9).
+        backgroundJobs.Enqueue<OrderNotificationJobs>(j => j.SendCancelledNotificationAsync(order.Id));
+
         return ToDetailDto(order);
     }
 
@@ -369,6 +372,8 @@ public sealed class OrderService(
         // değil, rollback olsa bile kuyruğa atılan job kalırdı.
         if (newStatus == OrderStatus.Shipped)
             backgroundJobs.Enqueue<OrderNotificationJobs>(j => j.SendShippedNotificationAsync(order.Id));
+        else if (newStatus == OrderStatus.Cancelled)
+            backgroundJobs.Enqueue<OrderNotificationJobs>(j => j.SendCancelledNotificationAsync(order.Id));
 
         return ToDetailDto(order);
     }

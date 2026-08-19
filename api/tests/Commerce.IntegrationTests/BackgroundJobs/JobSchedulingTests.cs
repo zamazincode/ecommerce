@@ -197,4 +197,37 @@ public class JobSchedulingTests(DatabaseFixture fixture) : IntegrationTestBase(f
         var jobs = Factory.BackgroundJobs.For<OrderNotificationJobs>(nameof(OrderNotificationJobs.SendShippedNotificationAsync));
         jobs.Count().ShouldBe(1);
     }
+
+    // ═══════════════════════════════════════════════════════════
+    // İptal bildirimi
+    // ═══════════════════════════════════════════════════════════
+
+    [Fact]
+    public async Task CancelOrder_EnqueuesCancelledJob()
+    {
+        await AuthenticateAsync();
+        var order = await CreatePendingOrderAsync();
+
+        var response = await Client.PostAsync($"/api/orders/{order.OrderNumber}/cancel", null, Ct);
+        response.StatusCode.ShouldBe(HttpStatusCode.OK);
+
+        var jobs = Factory.BackgroundJobs.For<OrderNotificationJobs>(nameof(OrderNotificationJobs.SendCancelledNotificationAsync));
+        jobs.Count().ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task AdminCancel_ViaChangeStatus_EnqueuesCancelledJob()
+    {
+        await AuthenticateAsync();
+        var order = await CreatePendingOrderAsync();
+
+        await ExecuteScopedAsync(async sp =>
+        {
+            var service = sp.GetRequiredService<OrderService>();
+            await service.ChangeStatusAsync(order.OrderNumber, OrderStatus.Cancelled, ct: Ct);
+        });
+
+        var jobs = Factory.BackgroundJobs.For<OrderNotificationJobs>(nameof(OrderNotificationJobs.SendCancelledNotificationAsync));
+        jobs.Count().ShouldBe(1);
+    }
 }

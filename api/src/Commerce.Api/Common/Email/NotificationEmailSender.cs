@@ -62,6 +62,15 @@ public sealed class NotificationEmailSender(IEmailService email, EmailTemplateRe
         return email.SendAsync(to, subject, body, ct);
     }
 
+    public Task SendCancelledAsync(
+        string to, string ad, string siparisNo, string siparisUrl, CancellationToken ct = default)
+    {
+        var subject = $"Siparişiniz iptal edildi — {siparisNo}";
+        var body = renderer.RenderWithLayout("siparis-iptal",
+            new { Ad = ad, SiparisNo = siparisNo, SiparisUrl = siparisUrl }, subject);
+        return email.SendAsync(to, subject, body, ct);
+    }
+
     public Task SendCartReminderAsync(
         string to, string ad, IReadOnlyList<string> urunAdlari, string sepetUrl, CancellationToken ct = default)
     {
