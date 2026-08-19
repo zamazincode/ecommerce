@@ -33,7 +33,9 @@ interface NavGroup {
 const NAV_GROUPS: NavGroup[] = [
 	{
 		label: null,
-		links: [{ href: "/admin", label: "Dashboard", icon: LayoutDashboardIcon }],
+		links: [
+			{ href: "/admin", label: "Dashboard", icon: LayoutDashboardIcon },
+		],
 	},
 	{
 		label: "Katalog",
@@ -102,7 +104,7 @@ export function AdminSidebar({ className }: { className?: string }) {
 	return (
 		<aside
 			className={cn(
-				"hidden w-60 shrink-0 flex-col border-r bg-background lg:flex",
+				"hidden w-60 shrink-0 flex-col border-r bg-background lg:flex h-screen sticky top-0",
 				className,
 			)}
 		>

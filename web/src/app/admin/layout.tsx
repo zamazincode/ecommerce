@@ -27,7 +27,7 @@ export default async function AdminLayout({
 				{/* `container-x` (max-w-7xl mx-auto) BİLEREK kullanılmıyor — sidebar'ın
 				    yanında ortalama yapıp 1920px'te sağda ölü alan bırakıyordu (sorun #1). */}
 				<main className="flex-1 px-4 py-6 sm:px-6 lg:px-8">
-					<div className="mx-auto w-full max-w-[1400px] space-y-6">
+					<div className="mx-auto w-full max-w-350 space-y-6">
 						{children}
 					</div>
 				</main>
