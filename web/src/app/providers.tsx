@@ -11,18 +11,16 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { ApiError } from "@/lib/api/client";
 
 export function Providers({ children }: { children: React.ReactNode }) {
-	// Sunucuya ilk istek atıldığında 1 kez instance oluşacak. Tarayıcı kapanana kadar çalışacak.
 	const [queryClient] = useState(
 		() =>
 			new QueryClient({
 				queryCache: new QueryCache({
-					// Yalnızca useQuery hataları — useMutation'ın ayrı bir cache'i
-					// var, Step 6/8/9/10'un yerel `catch` + `toast.add()`'ları bu
-					// yüzden çift bildirim riski taşımadan aynen kalıyor.
 					onError: (error, query) => {
 						toast.add({
 							title:
-								(query.meta?.errorMessage as string | undefined) ??
+								(query.meta?.errorMessage as
+									| string
+									| undefined) ??
 								(error instanceof ApiError
 									? "Veri yüklenemedi."
 									: "Bağlantı hatası oluştu."),
